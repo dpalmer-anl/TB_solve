@@ -96,15 +96,19 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 <h1>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h1>
 <p>TB_solve is a Python library designed to efficiently solve tight-binding models. The core problem we address is the generalized eigenvalue problem:</p>
 <div class="math notranslate nohighlight">
-\[H \psi = \epsilon S \psi\]</div>
+\[H |\psi\rangle = \epsilon S |\psi\rangle\]</div>
 <p>where:
 * <span class="math notranslate nohighlight">\(H\)</span> is the Hamiltonian matrix representing the system’s energy.
 * <span class="math notranslate nohighlight">\(S\)</span> is the Overlap matrix (which is the identity matrix <span class="math notranslate nohighlight">\(I\)</span> for orthogonal bases).
-* <span class="math notranslate nohighlight">\(\psi\)</span> are the eigenvectors (wave functions).
+* <span class="math notranslate nohighlight">\(|\psi\rangle\)</span> are the eigenvectors (wave functions).
 * <span class="math notranslate nohighlight">\(\epsilon\)</span> are the eigenvalues (energies).</p>
-<p>For many physical applications, we are interested in two main quantities:
-1. <strong>Band Structure</strong>: The eigenvalues <span class="math notranslate nohighlight">\(\epsilon(\mathbf{k})\)</span> as a function of the wave vector <span class="math notranslate nohighlight">\(\mathbf{k}\)</span>.
-2. <strong>Density Matrix</strong>: defined as:</p>
+<p>For many physical applications, we are interested in two main quantities:</p>
+<ol class="arabic simple">
+<li><p><strong>Band Structure</strong>: The eigenvalues <span class="math notranslate nohighlight">\(\epsilon(\mathbf{k})\)</span> as a function of the wave vector <span class="math notranslate nohighlight">\(\mathbf{k}\)</span>.</p></li>
+<li><p><strong>Density Matrix</strong>: defined as:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[\rho = \sum_{i=1}^{N_{occ}} |\psi_{i}\rangle\langle\psi_{i}|\]</div>
 <div class="math notranslate nohighlight">
 \[\rho_{\mu\nu} = \sum_{i=1}^{N_{occ}} c^*_{\mu,i} c_{\nu,i}\]</div>
 <p>where <span class="math notranslate nohighlight">\(c_{\mu,i}\)</span> are the coefficients of the <span class="math notranslate nohighlight">\(i\)</span>-th occupied eigenvector <span class="math notranslate nohighlight">\(\psi_{i}\)</span>.</p>

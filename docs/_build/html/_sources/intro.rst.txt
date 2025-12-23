@@ -3,7 +3,7 @@ Usage
 to install package:
 
 .. code-block:: bash
-   
+
    git clone https://github.com/dpalmer-anl/TB_solve.git
    cd TB_solve
    pip install -e .
@@ -23,21 +23,26 @@ TB_solve is a Python library designed to efficiently solve tight-binding models.
 
 .. math::
 
-   H \psi = \epsilon S \psi
+   H |\psi\rangle = \epsilon S |\psi\rangle
 
 where:
 * :math:`H` is the Hamiltonian matrix representing the system's energy.
 * :math:`S` is the Overlap matrix (which is the identity matrix :math:`I` for orthogonal bases).
-* :math:`\psi` are the eigenvectors (wave functions).
+* :math:`|\psi\rangle` are the eigenvectors (wave functions).
 * :math:`\epsilon` are the eigenvalues (energies).
 
 For many physical applications, we are interested in two main quantities:
+
 1. **Band Structure**: The eigenvalues :math:`\epsilon(\mathbf{k})` as a function of the wave vector :math:`\mathbf{k}`.
 2. **Density Matrix**: defined as:
 
 .. math::
 
-   \rho_{\mu\nu} = \sum_{i=1}^{N_{occ}} c^*_{\mu,i} c_{\nu,i}
+   \rho = \sum_{i=1}^{N_{occ}} |\psi_{i}\rangle\langle\psi_{i}|
+
+.. math::
+
+   \rho_{\mu\nu} = \sum_{i=1}^{N_{occ}} c^*_{\mu,i} c_{\nu,i} 
 
 where :math:`c_{\mu,i}` are the coefficients of the :math:`i`-th occupied eigenvector :math:`\psi_{i}`.
 
