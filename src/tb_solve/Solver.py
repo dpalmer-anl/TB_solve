@@ -366,7 +366,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             Defaults to True. Note: Some methods only support specific return types.
         nbands (int, optional): Number of bands to compute for sparse diagonalization. Defaults to 20.
         which (str, optional): Which eigenvalues to find for sparse diagonalization (e.g., 'LM', 'SA'). 
-            Defaults to 'LM'.
+            Defaults to 'SA' (Smallest Algebraic).
         **kwargs: Additional keyword arguments passed to the specific solver methods.
             - kbT (float): Temperature for Fermi operator expansion.
             - n_moments (int): Number of moments for Fermi operator expansion.

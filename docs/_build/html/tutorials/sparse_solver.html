@@ -85,7 +85,10 @@
 <p>This tutorial demonstrates how to use the sparse solver to solve the Hamiltonian of a graphene supercell.
 This method is a wrapper for scipy.sparse.linalg.eigsh, which uses ARPACK’s SSEUPD and DSEUPD functions
 which use the Implicitly Restarted Lanczos Method to find the eigenvalues and eigenvectors. The default for this function
-is to find the eigenvalues and eigenvectors near the Fermi level. <strong>Note</strong> this function only works on CPU’s.</p>
+is to find the eigenvalues and eigenvectors near the Fermi level. <strong>Note</strong> this function only works on CPU’s,</p>
+<blockquote>
+<div><p>but because it is sparse, it still can be used for very large systems.</p>
+</div></blockquote>
 <div class="literal-block-wrapper docutils container" id="id1">
 <div class="code-block-caption"><span class="caption-text">tutorial_sparse_solve.py</span><a class="headerlink" href="#id1" title="Link to this code"></a></div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -129,7 +132,7 @@ is to find the eigenvalues and eigenvectors near the Fermi level. <strong>Note</
 <span class="linenos">39</span>
 <span class="linenos">40</span><span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
 <span class="linenos">41</span>    <span class="n">nbands</span> <span class="o">=</span> <span class="mi">8</span>
-<span class="linenos">42</span>    <span class="n">efermi</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="linenos">42</span>    <span class="n">efermi</span> <span class="o">=</span> <span class="mf">0.0</span> 
 <span class="linenos">43</span>    <span class="n">tb_model</span> <span class="o">=</span> <span class="n">create_graphene_hamiltonian</span><span class="p">()</span>
 <span class="linenos">44</span>    
 <span class="linenos">45</span>    <span class="n">k_nodes</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>

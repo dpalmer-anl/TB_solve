@@ -9,8 +9,8 @@ This tutorial demonstrates how to calculate the density matrix of graphene using
 
 `PythTB <https://pythtb.org/>`_ is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.
 
-.. literalinclude:: graphene_density_matrix.py
+.. literalinclude:: ../../examples/tutorial_graphene_density_matrix.py
    :language: python
    :linenos:
-   :caption: graphene_density_matrix.py
+   :caption: tutorial_graphene_density_matrix.py
 
