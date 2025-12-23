@@ -80,6 +80,12 @@
   <section id="introduction">
 <h1>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h1>
 <p>TB_solve is a Python library designed to efficiently solve tight-binding models. The core problem we address is the generalized eigenvalue problem:</p>
+<p>to install package: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tb-solve</span></code></p>
+<p>to use the package:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`python</span>
+<span class="pre">from</span> <span class="pre">tb_solve</span> <span class="pre">import</span> <span class="pre">Solve_Hamiltonian</span>
+<span class="pre">from</span> <span class="pre">tb_solve.utils</span> <span class="pre">import</span> <span class="pre">disentangle_bands</span>
+<span class="pre">`</span></code></p>
 <div class="math notranslate nohighlight">
 \[H \psi = \epsilon S \psi\]</div>
 <p>where:
@@ -96,18 +102,19 @@
 <section id="solver-methods">
 <h2>Solver Methods<a class="headerlink" href="#solver-methods" title="Link to this heading"></a></h2>
 <p>TB_solve provides multiple solver methods tailored for different system sizes, sparsity patterns, and physical requirements.
-TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods(including intel gpu’s!).</p>
+TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods(including intel gpu’s!).
+tb.solve.Solver will automatically detect available devices and prioritize using GPU if available.</p>
 <ol class="arabic simple">
 <li><p><strong>Diagonalization</strong> (<code class="docutils literal notranslate"><span class="pre">method=&quot;diagonalization&quot;</span></code>)</p>
 <ul class="simple">
 <li><p><strong>Description</strong>: Performs a full dense diagonalization of the Hamiltonian.</p></li>
-<li><p><strong>Best for</strong>: Small to medium-sized systems (<span class="math notranslate nohighlight">\(N &lt; 20,000\)</span>) where all eigenvalues/eigenvectors are needed.</p></li>
-<li><p><strong>Limitations</strong>: Scaling is cubic <span class="math notranslate nohighlight">\(O(N^3)\)</span>, making it computationally prohibitive for very large systems. Supports Generalized Eigenvalue Problems (<span class="math notranslate nohighlight">\(S \neq I\)</span>).</p></li>
+<li><p><strong>Best for</strong>: Small to medium-sized systems (<span class="math notranslate nohighlight">\(N &lt; 20,000\)</span>) where all eigenvalues/eigenvectors are needed. Supports Generalized Eigenvalue Problems (<span class="math notranslate nohighlight">\(S \neq I\)</span>).</p></li>
+<li><p><strong>Limitations</strong>: Scaling is cubic <span class="math notranslate nohighlight">\(O(N^3)\)</span>, making it computationally prohibitive for very large systems.</p></li>
 </ul>
 </li>
 <li><p><strong>Sparse Diagonalization</strong> (<code class="docutils literal notranslate"><span class="pre">method=&quot;sparse_diagonalization&quot;</span></code>)</p>
 <ul class="simple">
-<li><p><strong>Description</strong>: Uses iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, typically near the Fermi level or band edges.</p></li>
+<li><p><strong>Description</strong>: Uses iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, default is to find bands near the fermi level.</p></li>
 <li><p><strong>Best for</strong>: Large sparse systems where only a few bands (<code class="docutils literal notranslate"><span class="pre">nbands</span></code>) are required. Useful for finding band structure near the fermi level.</p></li>
 <li><p><strong>Limitations</strong>: CPU-only implementation currently. Does not efficiently compute the full density matrix.</p></li>
 </ul>
@@ -117,7 +124,7 @@ TB_solve is written in PyTorch and supports both CPU and GPU computation for mos
 <li><p><strong>Description</strong>: A linear-scaling <span class="math notranslate nohighlight">\(O(N)\)</span> method (for sparse matrices) that approximates the density matrix using a Chebyshev polynomial expansion of the Fermi-Dirac distribution.</p></li>
 <li><p><strong>Feature</strong>: Includes <strong>Jackson kernel damping</strong>, which suppresses Gibbs oscillations, making it robust and accurate even for metallic systems at low temperatures.</p></li>
 <li><p><strong>Best for</strong>: Very large systems (<span class="math notranslate nohighlight">\(N &gt; 10^5\)</span>), calculating local observables, and finite-temperature calculations.</p></li>
-<li><p><strong>Limitations</strong>: Does not provide individual eigenvalues. Requires setting a temperature (<code class="docutils literal notranslate"><span class="pre">kbT</span></code>) and number of moments (<code class="docutils literal notranslate"><span class="pre">n_moments</span></code>).</p></li>
+<li><p><strong>Limitations</strong>: Does not provide individual eigenvalues. Requires user to determine convergence for number of moments (<code class="docutils literal notranslate"><span class="pre">n_moments</span></code>).(~200 is usually enough)</p></li>
 </ul>
 </li>
 <li><p><strong>Density Matrix Purification</strong> (<code class="docutils literal notranslate"><span class="pre">method=&quot;density_matrix_purification&quot;</span></code>)</p>
