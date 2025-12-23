@@ -75,30 +75,48 @@
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">tb_solve.Solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">device</span><span class="p">,</span> <span class="n">gpu_avail</span><span class="p">,</span> <span class="n">Solve_Hamiltonian</span><span class="p">,</span> <span class="n">fermi_operator_expansion</span>
-
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">linalg</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">linear_sum_assignment</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">disentangle_bands</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">psi</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;disentangle bands based on adjacent eigenvector overlap. assumes eigvals, eigvecs are sorted by kpoint index.</span>
-<span class="sd">    Use for disentangling bands from sparse diagonalization&quot;&quot;&quot;</span>
-    <span class="n">nbands</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">sorted_levels</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-    <span class="n">sorted_psi</span> <span class="o">=</span> <span class="p">[</span><span class="n">psi</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbands</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
-        <span class="n">e2</span><span class="p">,</span> <span class="n">psi2</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">psi</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">perm</span><span class="p">,</span> <span class="n">line_breaks</span> <span class="o">=</span> <span class="n">best_match</span><span class="p">(</span><span class="n">psi</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">psi2</span><span class="p">)</span>
-        <span class="n">e2</span> <span class="o">=</span> <span class="n">e2</span><span class="p">[</span><span class="n">perm</span><span class="p">]</span>
-        <span class="n">intermediate</span> <span class="o">=</span> <span class="p">(</span><span class="n">e</span> <span class="o">+</span> <span class="n">e2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
-        <span class="n">intermediate</span><span class="p">[</span><span class="n">line_breaks</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">psi</span> <span class="o">=</span> <span class="n">psi2</span><span class="p">[:,</span> <span class="n">perm</span><span class="p">]</span>
-        <span class="n">e</span> <span class="o">=</span> <span class="n">e2</span>
-        <span class="n">sorted_psi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
-        <span class="c1">#sorted_levels.append(intermediate)</span>
-        <span class="n">sorted_levels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">sorted_levels</span><span class="p">,</span> <span class="n">sorted_psi</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">best_match</span><span class="p">(</span><span class="n">psi1</span><span class="p">,</span> <span class="n">psi2</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">disentangle_bands</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">o_tol</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Disentangle bands across k-points using eigenvector overlaps.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        e (array-like): Eigenvalues with shape (nk, nbands).</span>
+<span class="sd">        psi (array-like): Eigenvectors with shape (nk, norb, nbands).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (e_sorted, psi_sorted) with the same shapes as inputs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="n">psi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">psi</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Expected e with shape (nk, nbands) and psi with shape (nk, norb, nbands)&quot;</span><span class="p">)</span>
+
+    <span class="n">nk</span><span class="p">,</span> <span class="n">nbands</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">norb</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">psi</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="n">e_sorted</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">psi_sorted</span> <span class="o">=</span> <span class="p">[</span><span class="n">psi</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nk</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">psi_curr</span> <span class="o">=</span> <span class="n">psi_sorted</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">e_next</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">psi_next</span> <span class="o">=</span> <span class="n">psi</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">perm</span><span class="p">,</span> <span class="n">line_breaks</span> <span class="o">=</span> <span class="n">best_match</span><span class="p">(</span><span class="n">psi_curr</span><span class="p">,</span> <span class="n">psi_next</span><span class="p">,</span> <span class="n">o_tol</span><span class="o">=</span><span class="n">o_tol</span><span class="p">)</span>
+        <span class="n">e_next</span> <span class="o">=</span> <span class="n">e_next</span><span class="p">[</span><span class="n">perm</span><span class="p">]</span>
+        <span class="n">psi_next</span> <span class="o">=</span> <span class="n">psi_next</span><span class="p">[:,</span> <span class="n">perm</span><span class="p">]</span>
+
+        <span class="n">psi_sorted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi_next</span><span class="p">)</span>
+        <span class="n">e_sorted</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e_next</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">e_sorted</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">psi_sorted</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">best_match</span><span class="p">(</span><span class="n">psi1</span><span class="p">,</span> <span class="n">psi2</span><span class="p">,</span> <span class="n">o_tol</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the best match of two sets of eigenvectors.</span>
 
 <span class="sd">    </span>
@@ -117,8 +135,8 @@
 <span class="sd">    diconnects : numpy 1D bool array</span>
 <span class="sd">        The levels with overlap below the ``threshold`` that should be considered disconnected.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">threshold</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">psi1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**-</span><span class="mf">0.25</span>
+    
+    <span class="n">threshold</span> <span class="o">=</span> <span class="n">o_tol</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">psi1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**-</span><span class="mf">0.25</span>
     <span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi1</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">@</span> <span class="n">psi2</span><span class="p">)</span>  <span class="c1"># Overlap matrix</span>
     <span class="n">orig</span><span class="p">,</span> <span class="n">perm</span> <span class="o">=</span> <span class="n">linear_sum_assignment</span><span class="p">(</span><span class="o">-</span><span class="n">Q</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">perm</span><span class="p">,</span> <span class="n">Q</span><span class="p">[</span><span class="n">orig</span><span class="p">,</span> <span class="n">perm</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span>

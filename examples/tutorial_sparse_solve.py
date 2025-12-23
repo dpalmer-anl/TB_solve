@@ -120,7 +120,7 @@ if __name__=="__main__":
             ax.scatter(k_dist, e_disentangled_sparse[:, b], c="b")
             ax.plot(k_dist, eigvals_dense_sel[:, b], c="r",linestyle="--")
     ax.legend()
-
+    plt.savefig("../docs/images/sparse_solver_graphene.png")
     plt.show()
 
     

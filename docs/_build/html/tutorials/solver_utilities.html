@@ -19,6 +19,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SparseSolver Tutorial" href="sparse_solver.html" />
     <link rel="prev" title="Graphene Density Matrix Tutorial" href="graphene_example.html" /> 
 </head>
 
@@ -43,11 +44,15 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../intro.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../intro.html#introduction">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/index.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="graphene_example.html">Graphene Density Matrix Tutorial</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Solver Utilities Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sparse_solver.html">SparseSolver Tutorial</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../modules.html">tb_solve</a></li>
-<li class="toctree-l1"><a class="reference internal" href="graphene_example.html">Graphene Density Matrix Tutorial</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Solver Utilities Tutorial</a></li>
 </ul>
 
         </div>
@@ -64,6 +69,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tutorials</a></li>
       <li class="breadcrumb-item active">Solver Utilities Tutorial</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/tutorials/solver_utilities.rst.txt" rel="nofollow"> View page source</a>
@@ -83,86 +89,70 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">Get_optimal_solver</span></code>: Automatically selects the fastest method.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Converge_Solver_settings</span></code>: Finds stable parameters (e.g., number of moments).</p></li>
 </ul>
-<div class="literal-block-wrapper docutils container" id="id1">
-<div class="code-block-caption"><span class="caption-text">tutorial_solver_utilities.py</span><a class="headerlink" href="#id1" title="Link to this code"></a></div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="linenos"> 2</span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="linenos"> 3</span><span class="kn">from</span><span class="w"> </span><span class="nn">pythtb</span><span class="w"> </span><span class="kn">import</span> <span class="n">TBModel</span><span class="p">,</span> <span class="n">Lattice</span>
-<span class="linenos"> 4</span><span class="kn">from</span><span class="w"> </span><span class="nn">tb_solve.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solver_helper</span><span class="p">,</span> <span class="n">Get_optimal_solver</span><span class="p">,</span> <span class="n">Converge_Solver_settings</span>
-<span class="linenos"> 5</span><span class="kn">from</span><span class="w"> </span><span class="nn">tb_solve</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solve_Hamiltonian</span>
-<span class="linenos"> 6</span>
-<span class="linenos"> 7</span><span class="c1"># Helper function to create a Hamiltonian (same as in the graphene tutorial)</span>
-<span class="linenos"> 8</span><span class="k">def</span><span class="w"> </span><span class="nf">create_graphene_hamiltonian</span><span class="p">(</span><span class="n">supercell_size</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">]):</span>
-<span class="linenos"> 9</span>    <span class="n">lat_vecs</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">]]</span>
-<span class="linenos">10</span>    <span class="n">orb_vecs</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">]]</span>
-<span class="linenos">11</span>    <span class="n">lat</span> <span class="o">=</span> <span class="n">Lattice</span><span class="p">(</span><span class="n">lat_vecs</span><span class="p">,</span> <span class="n">orb_vecs</span><span class="p">,</span> <span class="n">periodic_dirs</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="linenos">12</span>    <span class="n">my_model</span> <span class="o">=</span> <span class="n">TBModel</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
-<span class="linenos">13</span>    <span class="n">my_model</span><span class="o">.</span><span class="n">set_onsite</span><span class="p">([</span><span class="o">-</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
-<span class="linenos">14</span>    <span class="n">my_model</span><span class="o">.</span><span class="n">set_hop</span><span class="p">(</span><span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-<span class="linenos">15</span>    <span class="n">my_model</span><span class="o">.</span><span class="n">set_hop</span><span class="p">(</span><span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
-<span class="linenos">16</span>    <span class="n">my_model</span><span class="o">.</span><span class="n">set_hop</span><span class="p">(</span><span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
-<span class="linenos">17</span>    <span class="n">sc_model</span> <span class="o">=</span> <span class="n">my_model</span><span class="o">.</span><span class="n">make_supercell</span><span class="p">([[</span><span class="n">supercell_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">supercell_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]]],</span> <span class="n">to_home</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="linenos">18</span>    <span class="k">return</span> <span class="n">sc_model</span>
-<span class="linenos">19</span>
-<span class="linenos">20</span><span class="k">def</span><span class="w"> </span><span class="nf">run_utilities_tutorial</span><span class="p">():</span>
-<span class="linenos">21</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;--- Solver Utilities Tutorial ---&quot;</span><span class="p">)</span>
-<span class="linenos">22</span>    
-<span class="linenos">23</span>    <span class="c1"># 1. Create a large Hamiltonian</span>
-<span class="linenos">24</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">1. Creating a large Graphene Supercell (10x10)...&quot;</span><span class="p">)</span>
-<span class="linenos">25</span>    <span class="n">sc_model</span> <span class="o">=</span> <span class="n">create_graphene_hamiltonian</span><span class="p">(</span><span class="n">supercell_size</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
-<span class="linenos">26</span>    <span class="c1"># Get Hamiltonian at Gamma point</span>
-<span class="linenos">27</span>    <span class="n">H_numpy</span> <span class="o">=</span> <span class="n">sc_model</span><span class="o">.</span><span class="n">hamiltonian</span><span class="p">(</span><span class="n">k_pts</span><span class="o">=</span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]])[</span><span class="mi">0</span><span class="p">]</span>
-<span class="linenos">28</span>    <span class="n">H_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">H_numpy</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
-<span class="linenos">29</span>    
-<span class="linenos">30</span>    <span class="c1"># Ensure we use CPU for this tutorial to be safe, or detect device</span>
-<span class="linenos">31</span>    <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
-<span class="linenos">32</span>        <span class="n">H_torch</span> <span class="o">=</span> <span class="n">H_torch</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-<span class="linenos">33</span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using GPU.&quot;</span><span class="p">)</span>
-<span class="linenos">34</span>    <span class="k">else</span><span class="p">:</span>
-<span class="linenos">35</span>        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using CPU.&quot;</span><span class="p">)</span>
-<span class="linenos">36</span>        
-<span class="linenos">37</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Hamiltonian shape: </span><span class="si">{</span><span class="n">H_torch</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="linenos">38</span>
-<span class="linenos">39</span>    <span class="c1"># 2. Estimate Computation Time</span>
-<span class="linenos">40</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">2. Estimating computation time for different methods:&quot;</span><span class="p">)</span>
-<span class="linenos">41</span>    <span class="n">t_diag</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">H_torch</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;diagonalization&quot;</span><span class="p">)</span>
-<span class="linenos">42</span>    <span class="n">t_foe</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">H_torch</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-<span class="linenos">43</span>    <span class="c1"># Note: sparse_diagonalization is usually for eigenvalues, not full density matrix</span>
-<span class="linenos">44</span>    <span class="c1"># but Solver_helper can still estimate it.</span>
-<span class="linenos">45</span>    <span class="n">t_sparse</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">H_torch</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;sparse_diagonalization&quot;</span><span class="p">,</span> <span class="n">nbands</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
-<span class="linenos">46</span>    
-<span class="linenos">47</span>    <span class="c1"># 3. Get Optimal Solver automatically</span>
-<span class="linenos">48</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">3. Selecting optimal solver...&quot;</span><span class="p">)</span>
-<span class="linenos">49</span>    <span class="n">best_method</span><span class="p">,</span> <span class="n">min_time</span> <span class="o">=</span> <span class="n">Get_optimal_solver</span><span class="p">(</span><span class="n">H_torch</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nbands</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-<span class="linenos">50</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Optimal solver: </span><span class="si">{</span><span class="n">best_method</span><span class="si">}</span><span class="s2"> (Est. time: </span><span class="si">{</span><span class="n">min_time</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> s)&quot;</span><span class="p">)</span>
-<span class="linenos">51</span>    
-<span class="linenos">52</span>    <span class="c1"># 4. Converge Solver Settings</span>
-<span class="linenos">53</span>    <span class="c1"># Example: Find sufficient number of moments for Fermi Operator Expansion</span>
-<span class="linenos">54</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">4. Converging &#39;n_moments&#39; for Fermi Operator Expansion...&quot;</span><span class="p">)</span>
-<span class="linenos">55</span>    <span class="c1"># We want to find n_moments such that the density matrix doesn&#39;t change much</span>
-<span class="linenos">56</span>    <span class="n">optimal_moments</span> <span class="o">=</span> <span class="n">Converge_Solver_settings</span><span class="p">(</span>
-<span class="linenos">57</span>        <span class="n">H_torch</span><span class="p">,</span> 
-<span class="linenos">58</span>        <span class="n">method</span><span class="o">=</span><span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">,</span> 
-<span class="linenos">59</span>        <span class="n">variable</span><span class="o">=</span><span class="s2">&quot;n_moments&quot;</span><span class="p">,</span>
-<span class="linenos">60</span>        <span class="n">start_value</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> 
-<span class="linenos">61</span>        <span class="n">end_value</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> 
-<span class="linenos">62</span>        <span class="n">step</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> 
-<span class="linenos">63</span>        <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
-<span class="linenos">64</span>        <span class="n">kbT</span><span class="o">=</span><span class="mf">0.01</span> <span class="c1"># Fixed argument</span>
-<span class="linenos">65</span>    <span class="p">)</span>
-<span class="linenos">66</span>    
-<span class="linenos">67</span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Converged n_moments: </span><span class="si">{</span><span class="n">optimal_moments</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="linenos">68</span>    
-<span class="linenos">69</span>    <span class="c1"># 5. Run with optimized settings</span>
-<span class="linenos">70</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">5. Running final calculation...&quot;</span><span class="p">)</span>
-<span class="linenos">71</span>    <span class="n">dm</span> <span class="o">=</span> <span class="n">Solve_Hamiltonian</span><span class="p">(</span><span class="n">H_torch</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="n">optimal_moments</span><span class="p">,</span> <span class="n">kbT</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
-<span class="linenos">72</span>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Done. Density matrix shape:&quot;</span><span class="p">,</span> <span class="n">dm</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<span class="linenos">73</span>
-<span class="linenos">74</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
-<span class="linenos">75</span>    <span class="n">run_utilities_tutorial</span><span class="p">()</span>
-<span class="linenos">76</span>
+<p>First, import the necessary library and create the graphene Hamiltonian.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pythtb</span><span class="w"> </span><span class="kn">import</span> <span class="n">TBModel</span><span class="p">,</span> <span class="n">Lattice</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tb_solve.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solver_helper</span><span class="p">,</span> <span class="n">Get_optimal_solver</span><span class="p">,</span> <span class="n">Converge_Solver_settings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tb_solve</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solve_Hamiltonian</span>
+
+<span class="c1"># Helper function to create a Hamiltonian (same as in the graphene tutorial)</span>
+<span class="n">supercell_size</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+<span class="n">lat_vecs</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">]]</span>
+<span class="n">orb_vecs</span> <span class="o">=</span> <span class="p">[[</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">2.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">]]</span>
+<span class="n">lat</span> <span class="o">=</span> <span class="n">Lattice</span><span class="p">(</span><span class="n">lat_vecs</span><span class="p">,</span> <span class="n">orb_vecs</span><span class="p">,</span> <span class="n">periodic_dirs</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">my_model</span> <span class="o">=</span> <span class="n">TBModel</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">set_onsite</span><span class="p">([</span><span class="o">-</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">set_hop</span><span class="p">(</span><span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">set_hop</span><span class="p">(</span><span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">my_model</span><span class="o">.</span><span class="n">set_hop</span><span class="p">(</span><span class="o">-</span><span class="mf">2.7</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">sc_model</span> <span class="o">=</span> <span class="n">my_model</span><span class="o">.</span><span class="n">make_supercell</span><span class="p">([[</span><span class="n">supercell_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">supercell_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
 </pre></div>
 </div>
+<p>Next, we can explore the different utilities.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Create a large Hamiltonian</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">1. Creating a large Graphene Supercell (10x10)...&quot;</span><span class="p">)</span>
+<span class="c1"># Get Hamiltonian at Gamma point</span>
+<span class="n">H</span><span class="o">=</span> <span class="n">sc_model</span><span class="o">.</span><span class="n">hamiltonian</span><span class="p">()</span>
+
+<span class="c1"># Ensure we use CPU for this tutorial to be safe, or detect device</span>
+<span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="n">H</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using GPU.&quot;</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Using CPU.&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Hamiltonian shape: </span><span class="si">{</span><span class="n">H</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can estimate the computation time for different solvers.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">t_diag</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;diagonalization&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Diagonalization time: </span><span class="si">{</span><span class="n">t_diag</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+<span class="n">t_foe</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fermi Operator Expansion time: </span><span class="si">{</span><span class="n">t_foe</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+<span class="n">t_sparse</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;sparse_diagonalization&quot;</span><span class="p">,</span> <span class="n">nbands</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sparse Diagonalization time: </span><span class="si">{</span><span class="n">t_sparse</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can automatically select the optimal solver, for a given hamiltonian and settings.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">best_method</span><span class="p">,</span> <span class="n">min_time</span> <span class="o">=</span> <span class="n">Get_optimal_solver</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nbands</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Optimal solver: </span><span class="si">{</span><span class="n">best_method</span><span class="si">}</span><span class="s2"> (Est. time: </span><span class="si">{</span><span class="n">min_time</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> s)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can also converge the solver settings for different methods.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">optimal_moments</span> <span class="o">=</span> <span class="n">Converge_Solver_settings</span><span class="p">(</span>
+    <span class="n">H</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">,</span>
+    <span class="n">variable</span><span class="o">=</span><span class="s2">&quot;n_moments&quot;</span><span class="p">,</span>
+    <span class="n">start_value</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">end_value</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+    <span class="n">step</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span>
+    <span class="n">kbT</span><span class="o">=</span><span class="mf">0.01</span> <span class="c1"># Fixed argument</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Converged n_moments: </span><span class="si">{</span><span class="n">optimal_moments</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
 </div>
 </section>
 
@@ -171,6 +161,7 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="graphene_example.html" class="btn btn-neutral float-left" title="Graphene Density Matrix Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sparse_solver.html" class="btn btn-neutral float-right" title="SparseSolver Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
