@@ -44,7 +44,7 @@ tb_solve.Solver() will automatically detect available devices and prioritize usi
 
 2. **Sparse Diagonalization** (``method="sparse_diagonalization"``)
    
-   * **Description**: Uses iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, default is to find bands near the fermi level.
+   * **Description**: Uses :math:`O(N)` sparse iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, default is to find bands near the fermi level.
    * **Best for**: Large sparse systems where only a few bands (``nbands``) are required. Useful for finding band structure near the fermi level.
    * **Limitations**: CPU-only implementation currently. Does not efficiently compute the full density matrix. 
 
