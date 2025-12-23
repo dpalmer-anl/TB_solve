@@ -1,7 +1,6 @@
 Introduction
 ============
 
-
 TB_solve is a Python library designed to efficiently solve tight-binding models. The core problem we address is the generalized eigenvalue problem:
 
 .. math::
