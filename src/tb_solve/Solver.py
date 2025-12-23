@@ -343,7 +343,7 @@ def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Ten
 
 def Solve_Hamiltonian(Hamiltonian: torch.Tensor, Overlap=None, method="diagonalization", 
                         return_eigvals=False, return_eigvecs=False, return_density_matrix=True, 
-                        nbands=20, which='LM',**kwargs) -> torch.Tensor:
+                        nbands=20, which='SA',fermi_level=0,**kwargs) -> torch.Tensor:
     """Solve the Hamiltonian using the specified method.
     
     This is the main entry point for solving tight-binding Hamiltonians. It supports
@@ -410,7 +410,7 @@ def Solve_Hamiltonian(Hamiltonian: torch.Tensor, Overlap=None, method="diagonali
         print("Sparse diagonalization is a linear scaling method, but is only implemented for CPU's")
         if Overlap is not None:
             raise ValueError("Overlap not supported for sparse diagonalization")
-        eigval, eigvecs = eigsh(Hamiltonian, nbands, which=which,**kwargs)
+        eigval, eigvecs = eigsh(Hamiltonian-fermi_level, nbands, which=which,**kwargs)
         if return_eigvals:
             return eigvals
         if return_eigvecs:

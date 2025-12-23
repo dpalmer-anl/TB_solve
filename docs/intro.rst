@@ -21,23 +21,24 @@ For many physical applications, we are interested in two main quantities:
 
    \rho_{\mu\nu} = \sum_{i=1}^{N_{occ}} c^*_{\mu,i} c_{\nu,i}
 
-where :math:`c_{\mu,i}` are the coefficients of the :math:`i`-th occupied eigenvector \psi_{i}.
+where :math:`c_{\mu,i}` are the coefficients of the :math:`i`-th occupied eigenvector :math:`\psi_{i}`.
 
 Solver Methods
 --------------
 
 TB_solve provides multiple solver methods tailored for different system sizes, sparsity patterns, and physical requirements. 
-TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods(including intel gpu's!).
+TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods(including intel gpu's!). 
+tb.solve.Solver will automatically detect available devices and prioritize using GPU if available.
 
 1. **Diagonalization** (``method="diagonalization"``)
    
    * **Description**: Performs a full dense diagonalization of the Hamiltonian.
-   * **Best for**: Small to medium-sized systems (:math:`N < 20,000`) where all eigenvalues/eigenvectors are needed.
-   * **Limitations**: Scaling is cubic :math:`O(N^3)`, making it computationally prohibitive for very large systems. Supports Generalized Eigenvalue Problems (:math:`S \neq I`).
+   * **Best for**: Small to medium-sized systems (:math:`N < 20,000`) where all eigenvalues/eigenvectors are needed. Supports Generalized Eigenvalue Problems (:math:`S \neq I`).
+   * **Limitations**: Scaling is cubic :math:`O(N^3)`, making it computationally prohibitive for very large systems. 
 
 2. **Sparse Diagonalization** (``method="sparse_diagonalization"``)
    
-   * **Description**: Uses iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, typically near the Fermi level or band edges.
+   * **Description**: Uses iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, default is to find bands near the fermi level.
    * **Best for**: Large sparse systems where only a few bands (``nbands``) are required. Useful for finding band structure near the fermi level.
    * **Limitations**: CPU-only implementation currently. Does not efficiently compute the full density matrix. 
 
@@ -46,11 +47,11 @@ TB_solve is written in PyTorch and supports both CPU and GPU computation for mos
    * **Description**: A linear-scaling :math:`O(N)` method (for sparse matrices) that approximates the density matrix using a Chebyshev polynomial expansion of the Fermi-Dirac distribution.
    * **Feature**: Includes **Jackson kernel damping**, which suppresses Gibbs oscillations, making it robust and accurate even for metallic systems at low temperatures.
    * **Best for**: Very large systems (:math:`N > 10^5`), calculating local observables, and finite-temperature calculations.
-   * **Limitations**: Does not provide individual eigenvalues. Requires setting a temperature (``kbT``) and number of moments (``n_moments``).
+   * **Limitations**: Does not provide individual eigenvalues. Requires user to determine convergence for number of moments (``n_moments``).(~200 is usually enough)
 
 4. **Density Matrix Purification** (``method="density_matrix_purification"``)
    
    * **Description**: An iterative method that converges the density matrix to the canonical ensemble at zero temperature (:math:`T=0`) by enforcing idempotency (:math:`P^2 = P`).
-   * **Best for**: Large insulating systems (where it retains sparsity) or as an alternative linear-scaling approach for ground state properties.
-   * **Limitations**: Can be unstable for metals or systems with small gaps. Dense matrix multiplication steps can become costly if fill-in is high.
+   * **Best for**: Very large systems (:math:`N > 10^5`), or as an alternative linear-scaling approach for ground state properties.
+   * **Limitations**: Does not provide individual eigenvalues.
 
