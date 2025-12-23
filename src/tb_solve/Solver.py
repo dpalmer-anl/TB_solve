@@ -1,5 +1,5 @@
 import torch
-from scipy.sparse.linalg import eigsh_sparse
+from scipy.sparse.linalg import eigsh
 import math
 from typing import Tuple, Optional
 
@@ -374,7 +374,7 @@ def Solve_Hamiltonian(Hamiltonian: torch.Tensor, Overlap=None, method="diagonali
         print("Sparse diagonalization is a linear scaling method, but is only implemented for CPU's")
         if Overlap is not None:
             raise ValueError("Overlap not supported for sparse diagonalization")
-        eigval, eigvecs = eigsh_sparse(Hamiltonian, nbands, which=which,**kwargs)
+        eigval, eigvecs = eigsh(Hamiltonian, nbands, which=which,**kwargs)
         if return_eigvals:
             return eigvals
         if return_eigvecs:
