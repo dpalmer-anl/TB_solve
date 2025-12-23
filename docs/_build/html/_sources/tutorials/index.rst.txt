@@ -6,4 +6,5 @@ Tutorials
 
    graphene_example
    solver_utilities
+   sparse_solver
 

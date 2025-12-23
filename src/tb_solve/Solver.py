@@ -2,6 +2,7 @@ import torch
 from scipy.sparse.linalg import eigsh
 import math
 from typing import Tuple, Optional
+import numpy as np
 
 # Intel GPU device configuration
 def get_intel_gpu_device():
@@ -341,7 +342,7 @@ def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Ten
     
     return eigvals, eigvecs
 
-def Solve_Hamiltonian(Hamiltonian: torch.Tensor, Overlap=None, method="diagonalization", 
+def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization", 
                         return_eigvals=False, return_eigvecs=False, return_density_matrix=True, 
                         nbands=20, which='SA',fermi_level=0,**kwargs) -> torch.Tensor:
     """Solve the Hamiltonian using the specified method.
@@ -389,6 +390,15 @@ def Solve_Hamiltonian(Hamiltonian: torch.Tensor, Overlap=None, method="diagonali
          # These checks are redundant with the specific blocks but good for early exit
          pass
 
+    if not isinstance(Hamiltonian, torch.Tensor) and method != "sparse_diagonalization":
+        Hamiltonian = torch.tensor(Hamiltonian)
+        if Overlap is not None:
+            Overlap = torch.tensor(Overlap)
+    elif method == "sparse_diagonalization":
+        if not isinstance(Hamiltonian, np.ndarray):
+            Hamiltonian = np.array(Hamiltonian)
+            if Overlap is not None:
+                Overlap = np.array(Overlap)
 
     if method == "diagonalization":
         if Overlap is not None:
@@ -409,8 +419,9 @@ def Solve_Hamiltonian(Hamiltonian: torch.Tensor, Overlap=None, method="diagonali
     elif method == "sparse_diagonalization":
         print("Sparse diagonalization is a linear scaling method, but is only implemented for CPU's")
         if Overlap is not None:
-            raise ValueError("Overlap not supported for sparse diagonalization")
-        eigval, eigvecs = eigsh(Hamiltonian-fermi_level, nbands, which=which,**kwargs)
+            eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level,M=Overlap, which=which,**kwargs)
+        else:
+            eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level, which=which,**kwargs)
         if return_eigvals:
             return eigvals
         if return_eigvecs:

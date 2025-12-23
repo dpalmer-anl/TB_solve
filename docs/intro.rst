@@ -34,7 +34,8 @@ Solver Methods
 
 TB_solve provides multiple solver methods tailored for different system sizes, sparsity patterns, and physical requirements. 
 TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods (including intel gpu's!). 
-tb_solve.Solver() will automatically detect available devices and prioritize using GPU if available.
+tb_solve.Solver() will automatically detect available devices and prioritize using GPU if available. 
+The following reference contains all details for each solver method listed here, (amongst others): https://doi.org/10.1103/RevModPhys.71.1085
 
 1. **Diagonalization** (``method="diagonalization"``)
    
