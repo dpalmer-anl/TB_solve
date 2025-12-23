@@ -3,8 +3,10 @@ Usage
 to install package:
 
 .. code-block:: bash
-
-    pip install tb-solve
+   
+   git clone https://github.com/dpalmer-anl/TB_solve.git
+   cd TB_solve
+   pip install -e .
 
 to use the package:
 
