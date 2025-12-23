@@ -7,7 +7,7 @@ This tutorial demonstrates how to calculate the density matrix of graphene using
 2. **Fermi Operator Expansion** (Linear scaling, finite temperature)
 3. **Density Matrix Purification** (Linear scaling, zero temperature)
 
-It uses `PythTB <https://pythtb.org/>`_ to generate the Hamiltonian.
+`PythTB <https://pythtb.org/>`_ is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.
 
 .. literalinclude:: graphene_density_matrix.py
    :language: python

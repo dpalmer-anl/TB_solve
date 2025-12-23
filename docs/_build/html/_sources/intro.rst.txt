@@ -1,17 +1,23 @@
-Introduction
-============
+Usage
+===========
+to install package:
 
-TB_solve is a Python library designed to efficiently solve tight-binding models. The core problem we address is the generalized eigenvalue problem:
+.. code-block:: bash
 
-to install package: ``pip install tb-solve``
+    pip install tb-solve
 
 to use the package:
 
-``python``
+.. code-block:: python
 
-``from tb_solve import Solve_Hamiltonian``
+    from tb_solve import Solve_Hamiltonian
+    from tb_solve.utils import disentangle_bands
 
-``from tb_solve.utils import disentangle_bands``
+Introduction
+============
+
+
+TB_solve is a Python library designed to efficiently solve tight-binding models. The core problem we address is the generalized eigenvalue problem:
 
 .. math::
 
