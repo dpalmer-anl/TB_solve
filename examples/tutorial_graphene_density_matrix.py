@@ -1,14 +1,8 @@
 import numpy as np
 import torch
 from pythtb import TBModel, Lattice
-try:
-    from tb_solve import Solve_Hamiltonian
-except ImportError:
-    # If tb_solve is not installed in the environment, try to import from src
-    import sys
-    import os
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
-    from tb_solve import Solve_Hamiltonian
+from tb_solve import Solve_Hamiltonian
+from tb_solve.utils import disentangle_bands
 
 def create_graphene_hamiltonian(supercell_size=[5, 5]):
     """
