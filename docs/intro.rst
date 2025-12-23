@@ -8,7 +8,9 @@ to install package: ``pip install tb-solve``
 to use the package:
 
 ``python``
+
 ``from tb_solve import Solve_Hamiltonian``
+
 ``from tb_solve.utils import disentangle_bands``
 
 .. math::
