@@ -76,13 +76,13 @@ def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100,
     else:
         # Dense implementation
         row_sums = torch.sum(torch.abs(Hamiltonian), dim=1)
-        diag = torch.diagonal(Hamiltonian)
+        diag = torch.diagonal(Hamiltonian).real
         # Gerschgorin bounds: center + radius
         # center = diag, radius = row_sum - |diag|
         off_diag_sum = row_sums - torch.abs(diag)
         E_max = torch.max(diag + off_diag_sum)
         E_min = torch.min(diag - off_diag_sum)
-        trace_H = torch.trace(Hamiltonian)
+        trace_H = torch.trace(Hamiltonian).real
 
     mu_approx = trace_H / N
 
@@ -205,7 +205,7 @@ def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100,
             
     return rho * spin_degeneracy
 
-def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=100) -> torch.Tensor:
+def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=100, spin_degeneracy=2.0) -> torch.Tensor:
     """Compute the density matrix using the canonical purification method.
     
     This method iteratively refines an initial guess of the density matrix to achieve 
@@ -230,20 +230,48 @@ def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=10
     # H_min = min_i(H_ii - sum_{j≠i} |H_ij|)
     # H_max = max_i(H_ii + sum_{j≠i} |H_ij|)
     
-    # Calculate row sums of absolute values (excluding diagonal)
-    row_sums = torch.sum(torch.abs(H), dim=1) - torch.abs(torch.diagonal(H))
-    
     # Calculate Gerschgorin bounds
-    H_min = torch.min(torch.diagonal(H) - row_sums)
-    H_max = torch.max(torch.diagonal(H) + row_sums)
+    # For complex H, H_ii must be real for Hermitian matrices, but let's take .real to be safe
+    # radius is sum |H_ij| for j != i
     
-    # Calculate lambda = min[N_e/(H_max - mu), (N-N_e)/(mu - H_min)]
-    lambda_term1 = N_e / (H_max - mu) if H_max != mu else float('inf')
-    lambda_term2 = (N - N_e) / (mu - H_min) if mu != H_min else float('inf')
-    lambda_val = min(lambda_term1, lambda_term2)
+    H_diag = torch.diagonal(H).real
+    # row_sums = sum(|H_ij|) - |H_ii|
+    row_sums = torch.sum(torch.abs(H), dim=1) - torch.abs(H_diag)
     
+    H_min = torch.min(H_diag - row_sums)
+    H_max = torch.max(H_diag + row_sums)
+    
+    # Check for singular cases
+    if H_max == H_min:
+         # H is a scalar multiple of identity or zero
+         # Avoid division by zero
+         lambda_val = 1.0 # Or appropriate fallback
+    else:
+        # Calculate lambda = min[N_e/(H_max - mu), (N-N_e)/(mu - H_min)]
+        # Use real part of mu for bounds
+        mu_real = mu.real
+        
+        # Avoid division by zero
+        term1_denom = (H_max - mu_real)
+        term2_denom = (mu_real - H_min)
+        
+        if abs(term1_denom) < 1e-12:
+            lambda_term1 = float('inf')
+        else:
+            lambda_term1 = N_e / term1_denom
+            
+        if abs(term2_denom) < 1e-12:
+            lambda_term2 = float('inf')
+        else:
+            lambda_term2 = (N - N_e) / term2_denom
+            
+        lambda_val = min(lambda_term1, lambda_term2)
 
     I = torch.eye(N, device=device)
+    # Ensure P is same dtype as H (complex) if needed
+    if H.is_complex():
+        I = I.to(H.dtype)
+        
     P = (lambda_val / N) * (mu * I - H) + (N_e / N) * I
 
     # McWeeny purification iterations
@@ -256,7 +284,15 @@ def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=10
         P_cubed = P_squared @ P
         
         # Calculate c_i parameter for adaptive update
-        c_i = torch.trace(P_squared - P_cubed) / torch.trace(P - P_squared)
+        # c_i should be real
+        trace_num = torch.trace(P_squared - P_cubed).real
+        trace_den = torch.trace(P - P_squared).real
+        
+        # Stability check
+        if abs(trace_den) < 1e-12:
+            break
+            
+        c_i = trace_num / trace_den
         
         # Adaptive update based on c_i
         if c_i <= 0.5:
@@ -277,7 +313,7 @@ def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=10
     if iteration == max_iterations - 1:
         print(f"Warning: Density matrix purification did not converge after {max_iterations} iterations")
     
-    return P
+    return P * spin_degeneracy
 
 def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """PyTorch-optimized generalized eigenvalue solver.
