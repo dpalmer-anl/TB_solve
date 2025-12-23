@@ -1,0 +1,55 @@
+Introduction
+============
+
+TB_solve is a Python library designed to efficiently solve tight-binding models. The core problem we address is the generalized eigenvalue problem:
+
+.. math::
+
+   H \psi = \epsilon S \psi
+
+where:
+* :math:`H` is the Hamiltonian matrix representing the system's energy.
+* :math:`S` is the Overlap matrix (which is the identity matrix :math:`I` for orthogonal bases).
+* :math:`\psi` are the eigenvectors (wave functions).
+* :math:`\epsilon` are the eigenvalues (energies).
+
+For many physical applications, we are interested in two main quantities:
+1. **Band Structure**: The eigenvalues :math:`\epsilon(\mathbf{k})` as a function of the wave vector :math:`\mathbf{k}`.
+2. **Density Matrix**: The occupation of orbitals, defined as:
+
+.. math::
+
+   \rho_{\mu\nu} = \sum_{i=1}^{N_{occ}} c^*_{\mu,i} c_{\nu,i}
+
+where :math:`c_{\mu,i}` are the coefficients of the :math:`i`-th occupied eigenvector.
+
+Solver Methods
+--------------
+
+TB_solve provides multiple solver methods tailored for different system sizes, sparsity patterns, and physical requirements.
+
+1. **Diagonalization** (``method="diagonalization"``)
+   
+   * **Description**: Performs a full dense diagonalization of the Hamiltonian (using LAPACK/MAGMA).
+   * **Best for**: Small to medium-sized systems (:math:`N < 10,000`) where all eigenvalues/eigenvectors are needed.
+   * **Limitations**: Scaling is cubic :math:`O(N^3)`, making it computationally prohibitive for very large systems. Supports Generalized Eigenvalue Problems (:math:`S \neq I`).
+
+2. **Sparse Diagonalization** (``method="sparse_diagonalization"``)
+   
+   * **Description**: Uses iterative methods (Lanczos/Arnoldi via ARPACK) to find a subset of eigenvalues/eigenvectors, typically near the Fermi level or band edges.
+   * **Best for**: Large sparse systems where only a few bands (``nbands``) are required.
+   * **Limitations**: CPU-only implementation currently. Does not efficiently compute the full density matrix.
+
+3. **Fermi Operator Expansion** (``method="fermi_operator_expansion"``)
+   
+   * **Description**: A linear-scaling :math:`O(N)` method (for sparse matrices) that approximates the density matrix using a Chebyshev polynomial expansion of the Fermi-Dirac distribution.
+   * **Feature**: Includes **Jackson kernel damping**, which suppresses Gibbs oscillations, making it robust and accurate even for metallic systems at low temperatures.
+   * **Best for**: Very large systems (:math:`N > 10^5`), calculating local observables, and finite-temperature calculations.
+   * **Limitations**: Does not provide individual eigenvalues. Requires setting a temperature (``kbT``) and number of moments (``n_moments``).
+
+4. **Density Matrix Purification** (``method="density_matrix_purification"``)
+   
+   * **Description**: An iterative method that converges the density matrix to the canonical ensemble at zero temperature (:math:`T=0`) by enforcing idempotency (:math:`P^2 = P`).
+   * **Best for**: Large insulating systems (where it retains sparsity) or as an alternative linear-scaling approach for ground state properties.
+   * **Limitations**: Can be unstable for metals or systems with small gaps. Dense matrix multiplication steps can become costly if fill-in is high.
+

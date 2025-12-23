@@ -19,6 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Graphene Density Matrix Tutorial" href="tutorials/graphene_example.html" />
     <link rel="prev" title="tb_solve" href="modules.html" /> 
 </head>
 
@@ -68,6 +69,7 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/graphene_example.html">Graphene Density Matrix Tutorial</a></li>
 </ul>
 
         </div>
@@ -178,7 +180,7 @@ and bandwidth.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tb_solve.Solver.density_matrix_purification">
-<span class="sig-prename descclassname"><span class="pre">tb_solve.Solver.</span></span><span class="sig-name descname"><span class="pre">density_matrix_purification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">H</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="_modules/tb_solve/Solver.html#density_matrix_purification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Solver.density_matrix_purification" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">tb_solve.Solver.</span></span><span class="sig-name descname"><span class="pre">density_matrix_purification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">H</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_degeneracy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="_modules/tb_solve/Solver.html#density_matrix_purification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Solver.density_matrix_purification" title="Link to this definition"></a></dt>
 <dd><p>Compute the density matrix using the canonical purification method.</p>
 <p>This method iteratively refines an initial guess of the density matrix to achieve
 idempotency (P^2 = P), ensuring that the matrix’s eigenvalues are either 0 or 1.
@@ -355,7 +357,7 @@ and bandwidth.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tb_solve.density_matrix_purification">
-<span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">density_matrix_purification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">H</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="_modules/tb_solve/Solver.html#density_matrix_purification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.density_matrix_purification" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">density_matrix_purification</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">H</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spin_degeneracy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="_modules/tb_solve/Solver.html#density_matrix_purification"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.density_matrix_purification" title="Link to this definition"></a></dt>
 <dd><p>Compute the density matrix using the canonical purification method.</p>
 <p>This method iteratively refines an initial guess of the density matrix to achieve
 idempotency (P^2 = P), ensuring that the matrix’s eigenvalues are either 0 or 1.
@@ -461,6 +463,7 @@ avoids full diagonalization.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="modules.html" class="btn btn-neutral float-left" title="tb_solve" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorials/graphene_example.html" class="btn btn-neutral float-right" title="Graphene Density Matrix Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

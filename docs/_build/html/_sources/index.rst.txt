@@ -12,7 +12,9 @@ Welcome to TB_solve's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   intro
    modules
+   tutorials/graphene_example
 
 Indices and tables
 ==================

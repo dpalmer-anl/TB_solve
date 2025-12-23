@@ -42,6 +42,7 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../modules.html">tb_solve</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/graphene_example.html">Graphene Density Matrix Tutorial</a></li>
 </ul>
 
         </div>
@@ -152,13 +153,13 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># Dense implementation</span>
         <span class="n">row_sums</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-        <span class="n">diag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">)</span>
+        <span class="n">diag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
         <span class="c1"># Gerschgorin bounds: center + radius</span>
         <span class="c1"># center = diag, radius = row_sum - |diag|</span>
         <span class="n">off_diag_sum</span> <span class="o">=</span> <span class="n">row_sums</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">diag</span><span class="p">)</span>
         <span class="n">E_max</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">diag</span> <span class="o">+</span> <span class="n">off_diag_sum</span><span class="p">)</span>
         <span class="n">E_min</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">diag</span> <span class="o">-</span> <span class="n">off_diag_sum</span><span class="p">)</span>
-        <span class="n">trace_H</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">)</span>
+        <span class="n">trace_H</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
 
     <span class="n">mu_approx</span> <span class="o">=</span> <span class="n">trace_H</span> <span class="o">/</span> <span class="n">N</span>
 
@@ -284,7 +285,7 @@
 
 <div class="viewcode-block" id="density_matrix_purification">
 <a class="viewcode-back" href="../../tb_solve.html#tb_solve.Solver.density_matrix_purification">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">density_matrix_purification</span><span class="p">(</span><span class="n">H</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">density_matrix_purification</span><span class="p">(</span><span class="n">H</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">spin_degeneracy</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute the density matrix using the canonical purification method.</span>
 <span class="sd">    </span>
 <span class="sd">    This method iteratively refines an initial guess of the density matrix to achieve </span>
@@ -309,20 +310,48 @@
     <span class="c1"># H_min = min_i(H_ii - sum_{j≠i} |H_ij|)</span>
     <span class="c1"># H_max = max_i(H_ii + sum_{j≠i} |H_ij|)</span>
     
-    <span class="c1"># Calculate row sums of absolute values (excluding diagonal)</span>
-    <span class="n">row_sums</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">H</span><span class="p">))</span>
-    
     <span class="c1"># Calculate Gerschgorin bounds</span>
-    <span class="n">H_min</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">H</span><span class="p">)</span> <span class="o">-</span> <span class="n">row_sums</span><span class="p">)</span>
-    <span class="n">H_max</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">H</span><span class="p">)</span> <span class="o">+</span> <span class="n">row_sums</span><span class="p">)</span>
+    <span class="c1"># For complex H, H_ii must be real for Hermitian matrices, but let&#39;s take .real to be safe</span>
+    <span class="c1"># radius is sum |H_ij| for j != i</span>
     
-    <span class="c1"># Calculate lambda = min[N_e/(H_max - mu), (N-N_e)/(mu - H_min)]</span>
-    <span class="n">lambda_term1</span> <span class="o">=</span> <span class="n">N_e</span> <span class="o">/</span> <span class="p">(</span><span class="n">H_max</span> <span class="o">-</span> <span class="n">mu</span><span class="p">)</span> <span class="k">if</span> <span class="n">H_max</span> <span class="o">!=</span> <span class="n">mu</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
-    <span class="n">lambda_term2</span> <span class="o">=</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="n">N_e</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">mu</span> <span class="o">-</span> <span class="n">H_min</span><span class="p">)</span> <span class="k">if</span> <span class="n">mu</span> <span class="o">!=</span> <span class="n">H_min</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
-    <span class="n">lambda_val</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lambda_term1</span><span class="p">,</span> <span class="n">lambda_term2</span><span class="p">)</span>
+    <span class="n">H_diag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">H</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+    <span class="c1"># row_sums = sum(|H_ij|) - |H_ii|</span>
+    <span class="n">row_sums</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">H_diag</span><span class="p">)</span>
     
+    <span class="n">H_min</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">H_diag</span> <span class="o">-</span> <span class="n">row_sums</span><span class="p">)</span>
+    <span class="n">H_max</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">H_diag</span> <span class="o">+</span> <span class="n">row_sums</span><span class="p">)</span>
+    
+    <span class="c1"># Check for singular cases</span>
+    <span class="k">if</span> <span class="n">H_max</span> <span class="o">==</span> <span class="n">H_min</span><span class="p">:</span>
+         <span class="c1"># H is a scalar multiple of identity or zero</span>
+         <span class="c1"># Avoid division by zero</span>
+         <span class="n">lambda_val</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c1"># Or appropriate fallback</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Calculate lambda = min[N_e/(H_max - mu), (N-N_e)/(mu - H_min)]</span>
+        <span class="c1"># Use real part of mu for bounds</span>
+        <span class="n">mu_real</span> <span class="o">=</span> <span class="n">mu</span><span class="o">.</span><span class="n">real</span>
+        
+        <span class="c1"># Avoid division by zero</span>
+        <span class="n">term1_denom</span> <span class="o">=</span> <span class="p">(</span><span class="n">H_max</span> <span class="o">-</span> <span class="n">mu_real</span><span class="p">)</span>
+        <span class="n">term2_denom</span> <span class="o">=</span> <span class="p">(</span><span class="n">mu_real</span> <span class="o">-</span> <span class="n">H_min</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">term1_denom</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="n">lambda_term1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lambda_term1</span> <span class="o">=</span> <span class="n">N_e</span> <span class="o">/</span> <span class="n">term1_denom</span>
+            
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">term2_denom</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="n">lambda_term2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lambda_term2</span> <span class="o">=</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="n">N_e</span><span class="p">)</span> <span class="o">/</span> <span class="n">term2_denom</span>
+            
+        <span class="n">lambda_val</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">lambda_term1</span><span class="p">,</span> <span class="n">lambda_term2</span><span class="p">)</span>
 
     <span class="n">I</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="c1"># Ensure P is same dtype as H (complex) if needed</span>
+    <span class="k">if</span> <span class="n">H</span><span class="o">.</span><span class="n">is_complex</span><span class="p">():</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">H</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        
     <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">lambda_val</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">mu</span> <span class="o">*</span> <span class="n">I</span> <span class="o">-</span> <span class="n">H</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">N_e</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">I</span>
 
     <span class="c1"># McWeeny purification iterations</span>
@@ -335,7 +364,15 @@
         <span class="n">P_cubed</span> <span class="o">=</span> <span class="n">P_squared</span> <span class="o">@</span> <span class="n">P</span>
         
         <span class="c1"># Calculate c_i parameter for adaptive update</span>
-        <span class="n">c_i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">P_squared</span> <span class="o">-</span> <span class="n">P_cubed</span><span class="p">)</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">P</span> <span class="o">-</span> <span class="n">P_squared</span><span class="p">)</span>
+        <span class="c1"># c_i should be real</span>
+        <span class="n">trace_num</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">P_squared</span> <span class="o">-</span> <span class="n">P_cubed</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+        <span class="n">trace_den</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">P</span> <span class="o">-</span> <span class="n">P_squared</span><span class="p">)</span><span class="o">.</span><span class="n">real</span>
+        
+        <span class="c1"># Stability check</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">trace_den</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-12</span><span class="p">:</span>
+            <span class="k">break</span>
+            
+        <span class="n">c_i</span> <span class="o">=</span> <span class="n">trace_num</span> <span class="o">/</span> <span class="n">trace_den</span>
         
         <span class="c1"># Adaptive update based on c_i</span>
         <span class="k">if</span> <span class="n">c_i</span> <span class="o">&lt;=</span> <span class="mf">0.5</span><span class="p">:</span>
@@ -356,7 +393,7 @@
     <span class="k">if</span> <span class="n">iteration</span> <span class="o">==</span> <span class="n">max_iterations</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Density matrix purification did not converge after </span><span class="si">{</span><span class="n">max_iterations</span><span class="si">}</span><span class="s2"> iterations&quot;</span><span class="p">)</span>
     
-    <span class="k">return</span> <span class="n">P</span></div>
+    <span class="k">return</span> <span class="n">P</span> <span class="o">*</span> <span class="n">spin_degeneracy</span></div>
 
 
 <div class="viewcode-block" id="generalized_eigen_torch">
