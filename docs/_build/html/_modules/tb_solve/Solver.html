@@ -41,9 +41,11 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html#introduction">Introduction</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../modules.html">tb_solve</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials/graphene_example.html">Graphene Density Matrix Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/solver_utilities.html">Solver Utilities Tutorial</a></li>
 </ul>
 
         </div>
@@ -529,115 +531,6 @@
         
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid method&quot;</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="Solver_helper">
-<a class="viewcode-back" href="../../tb_solve.html#tb_solve.Solver.Solver_helper">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">Solver_helper</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;diagonalization&quot;</span><span class="p">,</span> <span class="n">nbands</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a time estimate for solving the Hamiltonian.</span>
-<span class="sd">    </span>
-<span class="sd">    Estimates the computation time based on the problem size (N), the selected method,</span>
-<span class="sd">    and the available hardware (CPU vs GPU). Uses empirical coefficients for FLOPs</span>
-<span class="sd">    and bandwidth.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        Hamiltonian (torch.Tensor): The Hamiltonian matrix (used for size N and sparsity check).</span>
-<span class="sd">        method (str, optional): The solver method to estimate. Defaults to &quot;diagonalization&quot;.</span>
-<span class="sd">        nbands (int, optional): Number of bands (for sparse diagonalization). Defaults to None.</span>
-<span class="sd">        max_iterations (int, optional): Max iterations (for purification). Defaults to 100.</span>
-<span class="sd">        n_moments (int, optional): Number of moments (for Fermi operator expansion). Defaults to 100.</span>
-<span class="sd">        **kwargs: Additional arguments.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        float: Estimated time in seconds.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">N</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    
-    <span class="c1"># Time constants estimated for modern hardware (seconds per operation count)</span>
-    <span class="c1"># CPU: ~1e-9 sec/flop</span>
-    <span class="c1"># GPU: ~1e-11 sec/flop (approx 100x speedup for dense matmul)</span>
-    
-    <span class="c1"># Constants A, B, C for O(N), O(N^2), O(N^3)</span>
-    <span class="c1"># These are very rough estimates.</span>
-    
-    <span class="c1"># O(N^3) dense diagonalization</span>
-    <span class="n">coeff_diag_cpu</span> <span class="o">=</span> <span class="mf">5e-11</span> <span class="c1"># e.g. 50 GFLOPS effective</span>
-    <span class="n">coeff_diag_gpu</span> <span class="o">=</span> <span class="mf">5e-13</span> <span class="c1"># e.g. 5 TFLOPS effective</span>
-    
-    <span class="c1"># O(N^2) per iteration (dense matmul)</span>
-    <span class="n">coeff_mm_cpu</span> <span class="o">=</span> <span class="mf">1e-11</span>
-    <span class="n">coeff_mm_gpu</span> <span class="o">=</span> <span class="mf">1e-13</span>
-    
-    <span class="c1"># O(N) sparse ops (depends heavily on sparsity)</span>
-    <span class="n">coeff_sparse_cpu</span> <span class="o">=</span> <span class="mf">1e-8</span>
-    
-    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;diagonalization&quot;</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
-            <span class="c1"># O(N^3)</span>
-            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_diag_cpu</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c1"># gpu</span>
-            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_diag_gpu</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
-            
-    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;sparse_diagonalization&quot;</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">nbands</span><span class="p">:</span>
-            <span class="n">nbands</span> <span class="o">=</span> <span class="mi">20</span> <span class="c1"># default assumption</span>
-        <span class="c1"># Arpack / Lanczos: k * O(N) or O(N^2) depending on sparsity.</span>
-        <span class="c1"># Assuming sparse MVM is O(N) * sparsity_factor. </span>
-        <span class="c1"># Let&#39;s approximate as O(N * nbands * iterations)</span>
-        <span class="c1"># Iterations typically ~ O(nbands) or constant?</span>
-        
-        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
-            <span class="c1"># Rough scaling</span>
-            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_sparse_cpu</span> <span class="o">*</span> <span class="n">N</span> <span class="o">*</span> <span class="n">nbands</span> <span class="o">*</span> <span class="mi">100</span> 
-        <span class="k">else</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Sparse diagonalization is a linear scaling method, but is only implemented for CPU&#39;s&quot;</span><span class="p">)</span>
-            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_sparse_cpu</span> <span class="o">*</span> <span class="n">N</span> <span class="o">*</span> <span class="n">nbands</span> <span class="o">*</span> <span class="mi">100</span>
-
-    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;density_matrix_purification&quot;</span><span class="p">:</span>
-        <span class="c1"># Matrix multiplications: O(N^3) actually for dense P</span>
-        <span class="c1"># Purification involves dense matrix multiplies P^2, P^3 even if H is sparse (fill-in).</span>
-        <span class="c1"># So it is O(N^3) per iteration unless P remains sparse (which it usually doesn&#39;t for metals/small gap).</span>
-        <span class="c1"># If we assume dense:</span>
-        <span class="n">ops_per_iter</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span> <span class="c1"># 2 matmuls (P^2, P^3) + overhead</span>
-        
-        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
-            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_mm_cpu</span> <span class="o">*</span> <span class="n">ops_per_iter</span> <span class="o">*</span> <span class="n">max_iterations</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># GPU acceleration for dense matmul is good</span>
-             <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_mm_gpu</span> <span class="o">*</span> <span class="n">ops_per_iter</span> <span class="o">*</span> <span class="n">max_iterations</span>
-
-    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">:</span>
-        <span class="c1"># KPM/Chebyshev: involves sparse MVM: H * T_k.</span>
-        <span class="c1"># Cost: n_moments * O(N_nz)</span>
-        <span class="c1"># If H is dense: n_moments * N^2</span>
-        <span class="c1"># If H is sparse: n_moments * N * avg_degree</span>
-        
-        <span class="n">is_sparse</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="o">.</span><span class="n">is_sparse</span>
-        <span class="k">if</span> <span class="n">is_sparse</span><span class="p">:</span>
-            <span class="c1"># Estimate avg degree</span>
-            <span class="c1"># n_nz = Hamiltonian._nnz() if hasattr(Hamiltonian, &#39;_nnz&#39;) else N*10</span>
-            <span class="n">ops_per_moment</span> <span class="o">=</span> <span class="n">N</span> <span class="o">*</span> <span class="mi">100</span> <span class="c1"># Approx sparse MVM</span>
-            <span class="n">coeff</span> <span class="o">=</span> <span class="n">coeff_sparse_cpu</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">ops_per_moment</span> <span class="o">=</span> <span class="n">N</span><span class="o">**</span><span class="mi">2</span>
-            <span class="n">coeff</span> <span class="o">=</span> <span class="n">coeff_mm_cpu</span>
-            
-        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
-            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff</span> <span class="o">*</span> <span class="n">ops_per_moment</span> <span class="o">*</span> <span class="n">n_moments</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># GPU can accelerate sparse or dense MVM</span>
-            <span class="c1"># Approx 10x-100x speedup</span>
-            <span class="k">if</span> <span class="n">is_sparse</span><span class="p">:</span>
-                 <span class="c1"># Sparse support on GPU varies, assume moderate speedup</span>
-                 <span class="n">time_estimate</span> <span class="o">=</span> <span class="p">(</span><span class="n">coeff</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">*</span> <span class="n">ops_per_moment</span> <span class="o">*</span> <span class="n">n_moments</span>
-            <span class="k">else</span><span class="p">:</span>
-                 <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_mm_gpu</span> <span class="o">*</span> <span class="n">ops_per_moment</span> <span class="o">*</span> <span class="n">n_moments</span>
-                 
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid method&quot;</span><span class="p">)</span>
-        
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Time estimate for </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">time_estimate</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> seconds, on device: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2"> with Number of orbitals=</span><span class="si">{</span><span class="n">N</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">time_estimate</span></div>
 
 
 <span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>

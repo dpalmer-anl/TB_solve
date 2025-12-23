@@ -1,0 +1,357 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tb_solve.utils &mdash; TB_solve 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            TB_solve
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">tb_solve</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">TB_solve</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">tb_solve.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for tb_solve.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tb_solve.Solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">device</span><span class="p">,</span> <span class="n">gpu_avail</span><span class="p">,</span> <span class="n">Solve_Hamiltonian</span><span class="p">,</span> <span class="n">fermi_operator_expansion</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="kn">import</span> <span class="n">linalg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">linear_sum_assignment</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">disentangle_bands</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">psi</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;disentangle bands based on adjacent eigenvector overlap. assumes eigvals, eigvecs are sorted by kpoint index.</span>
+<span class="sd">    Use for disentangling bands from sparse diagonalization&quot;&quot;&quot;</span>
+    <span class="n">nbands</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">sorted_levels</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">sorted_psi</span> <span class="o">=</span> <span class="p">[</span><span class="n">psi</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nbands</span><span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">e2</span><span class="p">,</span> <span class="n">psi2</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">psi</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">perm</span><span class="p">,</span> <span class="n">line_breaks</span> <span class="o">=</span> <span class="n">best_match</span><span class="p">(</span><span class="n">psi</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">psi2</span><span class="p">)</span>
+        <span class="n">e2</span> <span class="o">=</span> <span class="n">e2</span><span class="p">[</span><span class="n">perm</span><span class="p">]</span>
+        <span class="n">intermediate</span> <span class="o">=</span> <span class="p">(</span><span class="n">e</span> <span class="o">+</span> <span class="n">e2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">intermediate</span><span class="p">[</span><span class="n">line_breaks</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">psi</span> <span class="o">=</span> <span class="n">psi2</span><span class="p">[:,</span> <span class="n">perm</span><span class="p">]</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">e2</span>
+        <span class="n">sorted_psi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+        <span class="c1">#sorted_levels.append(intermediate)</span>
+        <span class="n">sorted_levels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sorted_levels</span><span class="p">,</span> <span class="n">sorted_psi</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">best_match</span><span class="p">(</span><span class="n">psi1</span><span class="p">,</span> <span class="n">psi2</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the best match of two sets of eigenvectors.</span>
+
+<span class="sd">    </span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    psi1, psi2 : numpy 2D complex arrays</span>
+<span class="sd">        Arrays of initial and final eigenvectors.</span>
+<span class="sd">    threshold : float, optional</span>
+<span class="sd">        Minimal overlap when the eigenvectors are considered belonging to the same band.</span>
+<span class="sd">        The default value is :math:`1/(2N)^{1/4}`, where :math:`N` is the length of each eigenvector.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">    --------</span>
+<span class="sd">    sorting : numpy 1D integer array</span>
+<span class="sd">        Permutation to apply to ``psi2`` to make the optimal match.</span>
+<span class="sd">    diconnects : numpy 1D bool array</span>
+<span class="sd">        The levels with overlap below the ``threshold`` that should be considered disconnected.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">threshold</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">psi1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**-</span><span class="mf">0.25</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">psi1</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">conj</span><span class="p">()</span> <span class="o">@</span> <span class="n">psi2</span><span class="p">)</span>  <span class="c1"># Overlap matrix</span>
+    <span class="n">orig</span><span class="p">,</span> <span class="n">perm</span> <span class="o">=</span> <span class="n">linear_sum_assignment</span><span class="p">(</span><span class="o">-</span><span class="n">Q</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">perm</span><span class="p">,</span> <span class="n">Q</span><span class="p">[</span><span class="n">orig</span><span class="p">,</span> <span class="n">perm</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span>
+    
+<div class="viewcode-block" id="Solver_helper">
+<a class="viewcode-back" href="../../tb_solve.html#tb_solve.Solver_helper">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">Solver_helper</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;diagonalization&quot;</span><span class="p">,</span> <span class="n">nbands</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">n_moments</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Generate a time estimate for solving the Hamiltonian.</span>
+<span class="sd">    </span>
+<span class="sd">    Estimates the computation time based on the problem size (N), the selected method,</span>
+<span class="sd">    and the available hardware (CPU vs GPU). Uses empirical coefficients for FLOPs</span>
+<span class="sd">    and bandwidth.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        Hamiltonian (torch.Tensor): The Hamiltonian matrix (used for size N and sparsity check).</span>
+<span class="sd">        method (str, optional): The solver method to estimate. Defaults to &quot;diagonalization&quot;.</span>
+<span class="sd">        nbands (int, optional): Number of bands (for sparse diagonalization). Defaults to None.</span>
+<span class="sd">        max_iterations (int, optional): Max iterations (for purification). Defaults to 100.</span>
+<span class="sd">        n_moments (int, optional): Number of moments (for Fermi operator expansion). Defaults to 100.</span>
+<span class="sd">        **kwargs: Additional arguments.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        float: Estimated time in seconds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="c1"># Time constants estimated for modern hardware (seconds per operation count)</span>
+    <span class="c1"># CPU: ~1e-9 sec/flop</span>
+    <span class="c1"># GPU: ~1e-11 sec/flop (approx 100x speedup for dense matmul)</span>
+    
+    <span class="c1"># Constants A, B, C for O(N), O(N^2), O(N^3)</span>
+    <span class="c1"># These are very rough estimates.</span>
+    
+    <span class="c1"># O(N^3) dense diagonalization</span>
+    <span class="n">coeff_diag_cpu</span> <span class="o">=</span> <span class="mf">5e-11</span> <span class="c1"># e.g. 50 GFLOPS effective</span>
+    <span class="n">coeff_diag_gpu</span> <span class="o">=</span> <span class="mf">5e-13</span> <span class="c1"># e.g. 5 TFLOPS effective</span>
+    
+    <span class="c1"># O(N^2) per iteration (dense matmul)</span>
+    <span class="n">coeff_mm_cpu</span> <span class="o">=</span> <span class="mf">1e-11</span>
+    <span class="n">coeff_mm_gpu</span> <span class="o">=</span> <span class="mf">1e-13</span>
+    
+    <span class="c1"># O(N) sparse ops (depends heavily on sparsity)</span>
+    <span class="n">coeff_sparse_cpu</span> <span class="o">=</span> <span class="mf">1e-8</span>
+    
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;diagonalization&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
+            <span class="c1"># O(N^3)</span>
+            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_diag_cpu</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># gpu</span>
+            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_diag_gpu</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+            
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;sparse_diagonalization&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">nbands</span><span class="p">:</span>
+            <span class="n">nbands</span> <span class="o">=</span> <span class="mi">20</span> <span class="c1"># default assumption</span>
+        <span class="c1"># Arpack / Lanczos: k * O(N) or O(N^2) depending on sparsity.</span>
+        <span class="c1"># Assuming sparse MVM is O(N) * sparsity_factor. </span>
+        <span class="c1"># Let&#39;s approximate as O(N * nbands * iterations)</span>
+        <span class="c1"># Iterations typically ~ O(nbands) or constant?</span>
+        
+        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
+            <span class="c1"># Rough scaling</span>
+            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_sparse_cpu</span> <span class="o">*</span> <span class="n">N</span> <span class="o">*</span> <span class="n">nbands</span> <span class="o">*</span> <span class="mi">100</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Sparse diagonalization is a linear scaling method, but is only implemented for CPU&#39;s&quot;</span><span class="p">)</span>
+            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_sparse_cpu</span> <span class="o">*</span> <span class="n">N</span> <span class="o">*</span> <span class="n">nbands</span> <span class="o">*</span> <span class="mi">100</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;density_matrix_purification&quot;</span><span class="p">:</span>
+        <span class="c1"># Matrix multiplications: O(N^3) actually for dense P</span>
+        <span class="c1"># Purification involves dense matrix multiplies P^2, P^3 even if H is sparse (fill-in).</span>
+        <span class="c1"># So it is O(N^3) per iteration unless P remains sparse (which it usually doesn&#39;t for metals/small gap).</span>
+        <span class="c1"># If we assume dense:</span>
+        <span class="n">ops_per_iter</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span> <span class="c1"># 2 matmuls (P^2, P^3) + overhead</span>
+        
+        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
+            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_mm_cpu</span> <span class="o">*</span> <span class="n">ops_per_iter</span> <span class="o">*</span> <span class="n">max_iterations</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># GPU acceleration for dense matmul is good</span>
+             <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_mm_gpu</span> <span class="o">*</span> <span class="n">ops_per_iter</span> <span class="o">*</span> <span class="n">max_iterations</span>
+
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">:</span>
+        <span class="c1"># KPM/Chebyshev: involves sparse MVM: H * T_k.</span>
+        <span class="c1"># Cost: n_moments * O(N_nz)</span>
+        <span class="c1"># If H is dense: n_moments * N^2</span>
+        <span class="c1"># If H is sparse: n_moments * N * avg_degree</span>
+        
+        <span class="n">is_sparse</span> <span class="o">=</span> <span class="n">Hamiltonian</span><span class="o">.</span><span class="n">is_sparse</span>
+        <span class="k">if</span> <span class="n">is_sparse</span><span class="p">:</span>
+            <span class="c1"># Estimate avg degree</span>
+            <span class="c1"># n_nz = Hamiltonian._nnz() if hasattr(Hamiltonian, &#39;_nnz&#39;) else N*10</span>
+            <span class="n">ops_per_moment</span> <span class="o">=</span> <span class="n">N</span> <span class="o">*</span> <span class="mi">100</span> <span class="c1"># Approx sparse MVM</span>
+            <span class="n">coeff</span> <span class="o">=</span> <span class="n">coeff_sparse_cpu</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ops_per_moment</span> <span class="o">=</span> <span class="n">N</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">coeff</span> <span class="o">=</span> <span class="n">coeff_mm_cpu</span>
+            
+        <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span><span class="p">:</span>
+            <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff</span> <span class="o">*</span> <span class="n">ops_per_moment</span> <span class="o">*</span> <span class="n">n_moments</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># GPU can accelerate sparse or dense MVM</span>
+            <span class="c1"># Approx 10x-100x speedup</span>
+            <span class="k">if</span> <span class="n">is_sparse</span><span class="p">:</span>
+                 <span class="c1"># Sparse support on GPU varies, assume moderate speedup</span>
+                 <span class="n">time_estimate</span> <span class="o">=</span> <span class="p">(</span><span class="n">coeff</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">*</span> <span class="n">ops_per_moment</span> <span class="o">*</span> <span class="n">n_moments</span>
+            <span class="k">else</span><span class="p">:</span>
+                 <span class="n">time_estimate</span> <span class="o">=</span> <span class="n">coeff_mm_gpu</span> <span class="o">*</span> <span class="n">ops_per_moment</span> <span class="o">*</span> <span class="n">n_moments</span>
+                 
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid method&quot;</span><span class="p">)</span>
+        
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Time estimate for </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> is </span><span class="si">{</span><span class="n">time_estimate</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> seconds, on device: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2"> with Number of orbitals=</span><span class="si">{</span><span class="n">N</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">time_estimate</span></div>
+
+
+<div class="viewcode-block" id="Get_optimal_solver">
+<a class="viewcode-back" href="../../tb_solve.html#tb_solve.Get_optimal_solver">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">Get_optimal_solver</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Selects the optimal solver method based on the estimated computation time.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        Hamiltonian (torch.Tensor): The Hamiltonian matrix.</span>
+<span class="sd">        method (str, optional): &quot;all&quot; or specific method to check. Defaults to &quot;all&quot;.</span>
+<span class="sd">        **kwargs: Additional arguments for Solver_helper.</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (optimal_method_name, estimated_time)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;diagonalization&quot;</span><span class="p">,</span> <span class="s2">&quot;sparse_diagonalization&quot;</span><span class="p">,</span> <span class="s2">&quot;density_matrix_purification&quot;</span><span class="p">,</span> <span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">]</span>
+    
+    <span class="n">best_method</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">min_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Skip incompatible methods if possible (e.g., sparse diag on GPU if not supported)</span>
+            <span class="c1"># Solver_helper prints a message but returns a time, so we can use it.</span>
+            <span class="c1"># However, sparse_diagonalization doesn&#39;t give density matrix, so if user needs DM, this is tricky.</span>
+            <span class="c1"># Assuming user wants optimal solver for *some* task.</span>
+            
+            <span class="c1"># Special handling: sparse_diagonalization is only for eigenvalues</span>
+            <span class="c1"># If Hamiltonian is small, diagonalization is usually best.</span>
+            
+            <span class="n">est_time</span> <span class="o">=</span> <span class="n">Solver_helper</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">m</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">est_time</span> <span class="o">&lt;</span> <span class="n">min_time</span><span class="p">:</span>
+                <span class="n">min_time</span> <span class="o">=</span> <span class="n">est_time</span>
+                <span class="n">best_method</span> <span class="o">=</span> <span class="n">m</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">continue</span>
+            
+    <span class="k">return</span> <span class="n">best_method</span><span class="p">,</span> <span class="n">min_time</span></div>
+
+
+<div class="viewcode-block" id="Converge_Solver_settings">
+<a class="viewcode-back" href="../../tb_solve.html#tb_solve.Converge_Solver_settings">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">Converge_Solver_settings</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;fermi_operator_expansion&quot;</span><span class="p">,</span> <span class="n">variable</span><span class="o">=</span><span class="s2">&quot;n_moments&quot;</span><span class="p">,</span> 
+                             <span class="n">start_value</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">end_value</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Finds the optimal parameter setting for a solver by checking convergence.</span>
+<span class="sd">    </span>
+<span class="sd">    Currently tailored for &#39;n_moments&#39; in Fermi Operator Expansion.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        Hamiltonian (torch.Tensor): The Hamiltonian matrix.</span>
+<span class="sd">        method (str): Solver method.</span>
+<span class="sd">        variable (str): Parameter to optimize (e.g., &quot;n_moments&quot;).</span>
+<span class="sd">        start_value (int/float): Starting value for the parameter.</span>
+<span class="sd">        end_value (int/float): Maximum value.</span>
+<span class="sd">        step (int/float): Step size.</span>
+<span class="sd">        tolerance (float): Convergence tolerance (difference norm).</span>
+<span class="sd">        **kwargs: Other fixed arguments for the solver (e.g., kbT).</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        int/float: The converged value of the parameter.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">prev_result</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">converged_value</span> <span class="o">=</span> <span class="n">end_value</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Converging </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+    
+    <span class="n">current_value</span> <span class="o">=</span> <span class="n">start_value</span>
+    <span class="k">while</span> <span class="n">current_value</span> <span class="o">&lt;=</span> <span class="n">end_value</span><span class="p">:</span>
+        <span class="c1"># Construct kwargs with the current variable value</span>
+        <span class="n">current_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">current_kwargs</span><span class="p">[</span><span class="n">variable</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_value</span>
+        
+        <span class="c1"># Run solver</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">Solve_Hamiltonian</span><span class="p">(</span><span class="n">Hamiltonian</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="o">**</span><span class="n">current_kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">prev_result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Check convergence (Frobenius norm of difference)</span>
+            <span class="n">diff</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">result</span> <span class="o">-</span> <span class="n">prev_result</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">current_value</span><span class="si">}</span><span class="s2">: diff=</span><span class="si">{</span><span class="n">diff</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">diff</span> <span class="o">&lt;</span> <span class="n">tolerance</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Converged at </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">current_value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">converged_value</span> <span class="o">=</span> <span class="n">current_value</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">current_value</span><span class="si">}</span><span class="s2">: (initial)&quot;</span><span class="p">)</span>
+            
+        <span class="n">prev_result</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="n">current_value</span> <span class="o">+=</span> <span class="n">step</span>
+        
+    <span class="k">return</span> <span class="n">converged_value</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Daniel Palmer.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

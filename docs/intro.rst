@@ -1,20 +1,3 @@
-Usage
-===========
-to install package:
-
-.. code-block:: bash
-
-   git clone https://github.com/dpalmer-anl/TB_solve.git
-   cd TB_solve
-   pip install -e .
-
-to use the package:
-
-.. code-block:: python
-
-    from tb_solve import Solve_Hamiltonian
-    from tb_solve.utils import disentangle_bands
-
 Introduction
 ============
 
@@ -50,8 +33,8 @@ Solver Methods
 --------------
 
 TB_solve provides multiple solver methods tailored for different system sizes, sparsity patterns, and physical requirements. 
-TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods(including intel gpu's!). 
-tb.solve.Solver will automatically detect available devices and prioritize using GPU if available.
+TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods (including intel gpu's!). 
+tb_solve.Solver() will automatically detect available devices and prioritize using GPU if available.
 
 1. **Diagonalization** (``method="diagonalization"``)
    
@@ -70,11 +53,11 @@ tb.solve.Solver will automatically detect available devices and prioritize using
    * **Description**: A linear-scaling :math:`O(N)` method (for sparse matrices) that approximates the density matrix using a Chebyshev polynomial expansion of the Fermi-Dirac distribution.
    * **Feature**: Includes **Jackson kernel damping**, which suppresses Gibbs oscillations, making it robust and accurate even for metallic systems at low temperatures.
    * **Best for**: Very large systems (:math:`N > 10^5`), calculating local observables, and finite-temperature calculations.
-   * **Limitations**: Does not provide individual eigenvalues. Requires user to determine convergence for number of moments (``n_moments``).(~200 is usually enough)
+   * **Limitations**: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (:math:`S \neq I`). Requires user to determine convergence for number of moments (``n_moments``).(~200 is usually enough)
 
 4. **Density Matrix Purification** (``method="density_matrix_purification"``)
    
    * **Description**: An iterative method that converges the density matrix to the canonical ensemble at zero temperature (:math:`T=0`) by enforcing idempotency (:math:`P^2 = P`).
    * **Best for**: Very large systems (:math:`N > 10^5`), or as an alternative linear-scaling approach for ground state properties.
-   * **Limitations**: Does not provide individual eigenvalues.
+   * **Limitations**: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (:math:`S \neq I`). 
 

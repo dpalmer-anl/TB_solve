@@ -13,8 +13,9 @@ Welcome to TB_solve's documentation!
    :caption: Contents:
 
    intro
+   usage/index
+   tutorials/index
    modules
-   tutorials/graphene_example
 
 Indices and tables
 ==================

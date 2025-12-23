@@ -19,7 +19,6 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Graphene Density Matrix Tutorial" href="tutorials/graphene_example.html" />
     <link rel="prev" title="tb_solve" href="modules.html" /> 
 </head>
 
@@ -45,12 +44,13 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/index.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">tb_solve</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">tb_solve package</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#module-tb_solve.Solver">tb_solve.Solver module</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solver.Solve_Hamiltonian"><code class="docutils literal notranslate"><span class="pre">Solve_Hamiltonian()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solver.Solver_helper"><code class="docutils literal notranslate"><span class="pre">Solver_helper()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solver.density_matrix_purification"><code class="docutils literal notranslate"><span class="pre">density_matrix_purification()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solver.fermi_operator_expansion"><code class="docutils literal notranslate"><span class="pre">fermi_operator_expansion()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solver.generalized_eigen_torch"><code class="docutils literal notranslate"><span class="pre">generalized_eigen_torch()</span></code></a></li>
@@ -58,6 +58,8 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#module-tb_solve">Module contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#tb_solve.Converge_Solver_settings"><code class="docutils literal notranslate"><span class="pre">Converge_Solver_settings()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#tb_solve.Get_optimal_solver"><code class="docutils literal notranslate"><span class="pre">Get_optimal_solver()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solve_Hamiltonian"><code class="docutils literal notranslate"><span class="pre">Solve_Hamiltonian()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.Solver_helper"><code class="docutils literal notranslate"><span class="pre">Solver_helper()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#tb_solve.density_matrix_purification"><code class="docutils literal notranslate"><span class="pre">density_matrix_purification()</span></code></a></li>
@@ -70,7 +72,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials/graphene_example.html">Graphene Density Matrix Tutorial</a></li>
 </ul>
 
         </div>
@@ -148,33 +149,6 @@ Note: The return type depends on the requested outputs and the method used.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>ValueError</strong> – If an invalid method is specified or incompatible arguments are provided.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="tb_solve.Solver.Solver_helper">
-<span class="sig-prename descclassname"><span class="pre">tb_solve.Solver.</span></span><span class="sig-name descname"><span class="pre">Solver_helper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Hamiltonian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'diagonalization'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbands</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_moments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tb_solve/Solver.html#Solver_helper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Solver.Solver_helper" title="Link to this definition"></a></dt>
-<dd><p>Generate a time estimate for solving the Hamiltonian.</p>
-<p>Estimates the computation time based on the problem size (N), the selected method,
-and the available hardware (CPU vs GPU). Uses empirical coefficients for FLOPs
-and bandwidth.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>Hamiltonian</strong> (<em>torch.Tensor</em>) – The Hamiltonian matrix (used for size N and sparsity check).</p></li>
-<li><p><strong>method</strong> (<em>str</em><em>, </em><em>optional</em>) – The solver method to estimate. Defaults to “diagonalization”.</p></li>
-<li><p><strong>nbands</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of bands (for sparse diagonalization). Defaults to None.</p></li>
-<li><p><strong>max_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – Max iterations (for purification). Defaults to 100.</p></li>
-<li><p><strong>n_moments</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of moments (for Fermi operator expansion). Defaults to 100.</p></li>
-<li><p><strong>**kwargs</strong> – Additional arguments.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Estimated time in seconds.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
 </dd>
 </dl>
 </dd></dl>
@@ -283,6 +257,54 @@ avoids full diagonalization.</p>
 <section id="module-tb_solve">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-tb_solve" title="Link to this heading"></a></h2>
 <dl class="py function">
+<dt class="sig sig-object py" id="tb_solve.Converge_Solver_settings">
+<span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">Converge_Solver_settings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Hamiltonian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'fermi_operator_expansion'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variable</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'n_moments'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tb_solve/utils.html#Converge_Solver_settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Converge_Solver_settings" title="Link to this definition"></a></dt>
+<dd><p>Finds the optimal parameter setting for a solver by checking convergence.</p>
+<p>Currently tailored for ‘n_moments’ in Fermi Operator Expansion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Hamiltonian</strong> (<em>torch.Tensor</em>) – The Hamiltonian matrix.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Solver method.</p></li>
+<li><p><strong>variable</strong> (<em>str</em>) – Parameter to optimize (e.g., “n_moments”).</p></li>
+<li><p><strong>start_value</strong> (<em>int/float</em>) – Starting value for the parameter.</p></li>
+<li><p><strong>end_value</strong> (<em>int/float</em>) – Maximum value.</p></li>
+<li><p><strong>step</strong> (<em>int/float</em>) – Step size.</p></li>
+<li><p><strong>tolerance</strong> (<em>float</em>) – Convergence tolerance (difference norm).</p></li>
+<li><p><strong>**kwargs</strong> – Other fixed arguments for the solver (e.g., kbT).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The converged value of the parameter.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int/float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="tb_solve.Get_optimal_solver">
+<span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">Get_optimal_solver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Hamiltonian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'all'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tb_solve/utils.html#Get_optimal_solver"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Get_optimal_solver" title="Link to this definition"></a></dt>
+<dd><p>Selects the optimal solver method based on the estimated computation time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Hamiltonian</strong> (<em>torch.Tensor</em>) – The Hamiltonian matrix.</p></li>
+<li><p><strong>method</strong> (<em>str</em><em>, </em><em>optional</em>) – “all” or specific method to check. Defaults to “all”.</p></li>
+<li><p><strong>**kwargs</strong> – Additional arguments for Solver_helper.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(optimal_method_name, estimated_time)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="tb_solve.Solve_Hamiltonian">
 <span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">Solve_Hamiltonian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Hamiltonian</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Overlap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'diagonalization'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_eigvals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_eigvecs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_density_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbands</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">which</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'SA'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fermi_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="_modules/tb_solve/Solver.html#Solve_Hamiltonian"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Solve_Hamiltonian" title="Link to this definition"></a></dt>
 <dd><p>Solve the Hamiltonian using the specified method.</p>
@@ -331,7 +353,7 @@ Note: The return type depends on the requested outputs and the method used.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="tb_solve.Solver_helper">
-<span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">Solver_helper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Hamiltonian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'diagonalization'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbands</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_moments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tb_solve/Solver.html#Solver_helper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Solver_helper" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">tb_solve.</span></span><span class="sig-name descname"><span class="pre">Solver_helper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Hamiltonian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'diagonalization'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbands</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_moments</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/tb_solve/utils.html#Solver_helper"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tb_solve.Solver_helper" title="Link to this definition"></a></dt>
 <dd><p>Generate a time estimate for solving the Hamiltonian.</p>
 <p>Estimates the computation time based on the problem size (N), the selected method,
 and the available hardware (CPU vs GPU). Uses empirical coefficients for FLOPs
@@ -464,7 +486,6 @@ avoids full diagonalization.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="modules.html" class="btn btn-neutral float-left" title="tb_solve" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="tutorials/graphene_example.html" class="btn btn-neutral float-right" title="Graphene Density Matrix Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
