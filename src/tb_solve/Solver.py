@@ -344,7 +344,7 @@ def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Ten
 
 def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization", 
                         return_eigvals=False, return_eigvecs=False, return_density_matrix=True, 
-                        nbands=20, which='SA',fermi_level=0,**kwargs) -> torch.Tensor:
+                        nbands=20, which='LM',fermi_level=0,**kwargs) -> torch.Tensor:
     """Solve the Hamiltonian using the specified method.
     
     This is the main entry point for solving tight-binding Hamiltonians. It supports
@@ -366,7 +366,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             Defaults to True. Note: Some methods only support specific return types.
         nbands (int, optional): Number of bands to compute for sparse diagonalization. Defaults to 20.
         which (str, optional): Which eigenvalues to find for sparse diagonalization (e.g., 'LM', 'SA'). 
-            Defaults to 'SA' (Smallest Algebraic).
+            Defaults to 'LM' (Largest Magnitude).
         **kwargs: Additional keyword arguments passed to the specific solver methods.
             - kbT (float): Temperature for Fermi operator expansion.
             - n_moments (int): Number of moments for Fermi operator expansion.
@@ -399,21 +399,48 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             Hamiltonian = np.array(Hamiltonian)
             if Overlap is not None:
                 Overlap = np.array(Overlap)
+        Hamiltonian = np.squeeze(Hamiltonian)
+        if Overlap is not None:
+            Overlap = np.squeeze(Overlap)
 
     if method == "diagonalization":
         if Overlap is not None:
             eigvals, eigvecs = generalized_eigen_torch(Hamiltonian, Overlap)
+            if not return_density_matrix:
+                if return_eigvals and return_eigvecs:
+                    return eigvals, eigvecs
+                if return_eigvals:
+                    return eigvals
+                if return_eigvecs:
+                    return eigvecs
+
             nocc = len(eigvals)//2
             density_matrix = 2*eigvecs[:, :nocc] @ eigvecs[:, :nocc].T
+            if return_eigvals and return_eigvecs:
+                return density_matrix, eigvals, eigvecs
             if return_eigvals:
                 return density_matrix, eigvals
+            if return_eigvecs:
+                return density_matrix, eigvecs
             return density_matrix
         else:
             eigvals, eigvecs = torch.linalg.eigh(Hamiltonian)
+            if not return_density_matrix:
+                if return_eigvals and return_eigvecs:
+                    return eigvals, eigvecs
+                if return_eigvals:
+                    return eigvals
+                if return_eigvecs:
+                    return eigvecs
+
             nocc = len(eigvals)//2
             density_matrix = 2*eigvecs[:, :nocc] @ eigvecs[:, :nocc].T
+            if return_eigvals and return_eigvecs:
+                return density_matrix, eigvals, eigvecs
             if return_eigvals:
                 return density_matrix, eigvals
+            if return_eigvecs:
+                return density_matrix, eigvecs
             return density_matrix
     
     elif method == "sparse_diagonalization":
@@ -422,13 +449,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level,M=Overlap, which=which,**kwargs)
         else:
             eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level, which=which,**kwargs)
-        if return_eigvals:
-            return eigvals
-        if return_eigvecs:
-            return eigvals,eigvecs
-        if return_density_matrix:
-            raise ValueError("return_density_matrix not supported for sparse diagonalization. \
-                            Only supports return_eigvals=True.")
+        return eigvals,eigvecs
 
     if method == "density_matrix_purification":
         if Overlap is not None:

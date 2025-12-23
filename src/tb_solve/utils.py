@@ -1,30 +1,48 @@
 import torch
 import math
 from tb_solve.Solver import device, gpu_avail, Solve_Hamiltonian, fermi_operator_expansion
-
+import numpy as np
 from scipy import linalg
 from scipy.optimize import linear_sum_assignment
 
-def disentangle_bands(e, psi):
-    """disentangle bands based on adjacent eigenvector overlap. assumes eigvals, eigvecs are sorted by kpoint index.
-    Use for disentangling bands from sparse diagonalization"""
-    nbands = e.shape[0]
-    sorted_levels = [e[0]]
-    sorted_psi = [psi[0]]
-    for i in range(nbands-1):
-        e2, psi2 = e[i+1], psi[i+1]
-        perm, line_breaks = best_match(psi[i], psi2)
-        e2 = e2[perm]
-        intermediate = (e + e2) / 2
-        intermediate[line_breaks] = None
-        psi = psi2[:, perm]
-        e = e2
-        sorted_psi.append(psi)
-        #sorted_levels.append(intermediate)
-        sorted_levels.append(e)
-    return sorted_levels, sorted_psi
 
-def best_match(psi1, psi2, threshold=None):
+def disentangle_bands(e, psi, o_tol=1):
+    """Disentangle bands across k-points using eigenvector overlaps.
+
+    Args:
+        e (array-like): Eigenvalues with shape (nk, nbands).
+        psi (array-like): Eigenvectors with shape (nk, norb, nbands).
+
+    Returns:
+        tuple: (e_sorted, psi_sorted) with the same shapes as inputs.
+    """
+    e = np.array(e)
+    psi = np.array(psi)
+
+    if e.ndim != 2 or psi.ndim != 3:
+        raise ValueError("Expected e with shape (nk, nbands) and psi with shape (nk, norb, nbands)")
+
+    nk, nbands = e.shape
+    _, norb, _ = psi.shape
+
+    e_sorted = [e[0]]
+    psi_sorted = [psi[0]]
+
+    for k in range(nk - 1):
+        psi_curr = psi_sorted[-1]
+        e_next = e[k + 1]
+        psi_next = psi[k + 1]
+
+        perm, line_breaks = best_match(psi_curr, psi_next, o_tol=o_tol)
+        e_next = e_next[perm]
+        psi_next = psi_next[:, perm]
+
+        psi_sorted.append(psi_next)
+        e_sorted.append(e_next)
+
+    return np.array(e_sorted), np.array(psi_sorted)
+
+def best_match(psi1, psi2, o_tol=1):
     """Find the best match of two sets of eigenvectors.
 
     
@@ -43,8 +61,8 @@ def best_match(psi1, psi2, threshold=None):
     diconnects : numpy 1D bool array
         The levels with overlap below the ``threshold`` that should be considered disconnected.
     """
-    if threshold is None:
-        threshold = (2 * psi1.shape[0])**-0.25
+    
+    threshold = o_tol * (2 * psi1.shape[0])**-0.25
     Q = np.abs(psi1.T.conj() @ psi2)  # Overlap matrix
     orig, perm = linear_sum_assignment(-Q)
     return perm, Q[orig, perm] < threshold
