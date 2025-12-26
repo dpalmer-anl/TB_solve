@@ -5,13 +5,13 @@ Welcome to TB_solve's documentation!
     :alt: tb_solve logo
     :align: center
     :width: 75%
-    
+
 **TB_solve** is a Python library for solving tight binding models. It includes solvers of varying complexity:
 
 * Direct Diagonalization
-* Sparse Diagonalization (Lanczos/ARPACK)
+* Sparse Diagonalization (Lanczos/ARPACK, Linear Scaling)
 * Fermi Operator Expansion (Linear Scaling)
-* Density Matrix Purification (Linear Scaling)
+* Density Matrix Minimization (Linear Scaling)
 
 .. toctree::
    :maxdepth: 2

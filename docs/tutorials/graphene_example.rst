@@ -5,7 +5,7 @@ This tutorial demonstrates how to calculate the density matrix of graphene using
 
 1. **Diagonalization** (Standard method)
 2. **Fermi Operator Expansion** (Linear scaling, finite temperature)
-3. **Density Matrix Purification** (Linear scaling, zero temperature)
+3. **Density Matrix minimization** (Linear scaling, zero temperature)
 
 `PythTB <https://pythtb.org/>`_ is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.
 
@@ -47,7 +47,7 @@ First, import the necessary library and create the graphene Hamiltonian.
 
    my_model = my_model.make_supercell([[supercell_size[0], 1], [1, supercell_size[1]]])
 
-Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, and Density Matrix Purification solvers to compare the results.
+Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, and Density Matrix minimization solvers to compare the results.
 
 .. code-block:: python
     
@@ -87,13 +87,13 @@ Next, we can solve the Hamiltonian for the density matrix. We will use the diago
     )
     print("Density Matrix:\n", dm_foe)
 
-    # 3. Density Matrix Purification
-    # Note: This is a T=0 method (canonical purification).
-    print("\nMethod: Density Matrix Purification")
-    dm_purification = Solve_Hamiltonian(
+    # 3. Density Matrix minimization
+    # Note: This is a T=0 method (canonical minimization).
+    print("\nMethod: Density Matrix minimization")
+    dm_minimization = Solve_Hamiltonian(
         H, 
-        method="density_matrix_purification",
+        method="density_matrix_minimization",
         max_iterations=50
     )
-    print("Density Matrix:\n", dm_purification)
+    print("Density Matrix:\n", dm_minimization)
 

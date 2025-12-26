@@ -206,8 +206,8 @@ def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100,
             
     return rho * spin_degeneracy
 
-def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=100, spin_degeneracy=2.0) -> torch.Tensor:
-    """Compute the density matrix using the canonical purification method.
+def density_matrix_minimization(H: torch.Tensor, epsilon=1e-6, max_iterations=100, spin_degeneracy=2.0) -> torch.Tensor:
+    """Compute the density matrix using the canonical minimization method.
     
     This method iteratively refines an initial guess of the density matrix to achieve 
     idempotency (P^2 = P), ensuring that the matrix's eigenvalues are either 0 or 1.
@@ -275,12 +275,12 @@ def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=10
         
     P = (lambda_val / N) * (mu * I - H) + (N_e / N) * I
 
-    # McWeeny purification iterations
+    # McWeeny minimization iterations
     for iteration in range(max_iterations):
         # Calculate current energy E = tr(PH)
         E_old = torch.real(torch.trace(P @ H))
         
-        # McWeeny purification: P_{n+1} = 3P_n² - 2P_n³
+        # McWeeny minimization: P_{n+1} = 3P_n² - 2P_n³
         P_squared = P @ P
         P_cubed = P_squared @ P
         
@@ -312,7 +312,7 @@ def density_matrix_purification(H: torch.Tensor, epsilon=1e-6, max_iterations=10
             break
     
     if iteration == max_iterations - 1:
-        print(f"Warning: Density matrix purification did not converge after {max_iterations} iterations")
+        print(f"Warning: Density matrix minimization did not converge after {max_iterations} iterations")
     
     return P * spin_degeneracy
 
@@ -349,7 +349,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
     
     This is the main entry point for solving tight-binding Hamiltonians. It supports
     various methods including full diagonalization, sparse diagonalization, density 
-    matrix purification, and Fermi operator expansion.
+    matrix minimization, and Fermi operator expansion.
     
     Args:
         Hamiltonian (torch.Tensor): The Hamiltonian matrix of shape (N,N).
@@ -358,7 +358,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
         method (str, optional): The solver method to use. Options are:
             - "diagonalization": Full diagonalization (default).
             - "sparse_diagonalization": Sparse diagonalization using ARPACK (CPU only).
-            - "density_matrix_purification": Linear scaling purification (T=0).
+            - "density_matrix_minimization": Linear scaling minimization (T=0).
             - "fermi_operator_expansion": Linear scaling Chebyshev expansion (finite T).
         return_eigvals (bool, optional): Whether to return eigenvalues. Defaults to False.
         return_eigvecs (bool, optional): Whether to return eigenvectors. Defaults to False.
@@ -370,8 +370,8 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
         **kwargs: Additional keyword arguments passed to the specific solver methods.
             - kbT (float): Temperature for Fermi operator expansion.
             - n_moments (int): Number of moments for Fermi operator expansion.
-            - epsilon (float): Convergence threshold for purification.
-            - max_iterations (int): Max iterations for purification.
+            - epsilon (float): Convergence threshold for minimization.
+            - max_iterations (int): Max iterations for minimization.
             - spin_degeneracy (float): Spin degeneracy factor.
 
     Returns:
@@ -382,11 +382,11 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
     Raises:
         ValueError: If an invalid method is specified or incompatible arguments are provided.
     """
-    if method == "density_matrix_purification" or method == "fermi_operator_expansion" and Overlap is not None:
+    if method == "density_matrix_minimization" or method == "fermi_operator_expansion" and Overlap is not None:
         pass # Checks are done in specific blocks below for better error messages or we can keep them here.
     
     # Validation checks
-    if method in ["density_matrix_purification", "fermi_operator_expansion"]:
+    if method in ["density_matrix_minimization", "fermi_operator_expansion"]:
          # These checks are redundant with the specific blocks but good for early exit
          pass
 
@@ -451,15 +451,15 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level, which=which,**kwargs)
         return eigvals,eigvecs
 
-    if method == "density_matrix_purification":
+    if method == "density_matrix_minimization":
         if Overlap is not None:
-            raise ValueError("Overlap not supported for density matrix purification")
+            raise ValueError("Overlap not supported for density matrix minimization")
         if return_eigvals or return_eigvecs:
-             raise ValueError("return_eigvals/eigvecs not supported for density matrix purification. Only supports return_density_matrix=True.")
+             raise ValueError("return_eigvals/eigvecs not supported for density matrix minimization. Only supports return_density_matrix=True.")
         
         epsilon = kwargs.get('epsilon', 1e-6)
         max_iterations = kwargs.get('max_iterations', 100)
-        return density_matrix_purification(Hamiltonian, epsilon=epsilon, max_iterations=max_iterations)
+        return density_matrix_minimization(Hamiltonian, epsilon=epsilon, max_iterations=max_iterations)
         
     elif method == "fermi_operator_expansion":
         if Overlap is not None:

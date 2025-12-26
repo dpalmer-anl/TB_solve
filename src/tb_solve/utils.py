@@ -78,7 +78,7 @@ def Solver_helper(Hamiltonian, method="diagonalization", nbands=None, max_iterat
         Hamiltonian (torch.Tensor): The Hamiltonian matrix (used for size N and sparsity check).
         method (str, optional): The solver method to estimate. Defaults to "diagonalization".
         nbands (int, optional): Number of bands (for sparse diagonalization). Defaults to None.
-        max_iterations (int, optional): Max iterations (for purification). Defaults to 100.
+        max_iterations (int, optional): Max iterations (for minimization). Defaults to 100.
         n_moments (int, optional): Number of moments (for Fermi operator expansion). Defaults to 100.
         **kwargs: Additional arguments.
 
@@ -127,9 +127,9 @@ def Solver_helper(Hamiltonian, method="diagonalization", nbands=None, max_iterat
             print("Sparse diagonalization is a linear scaling method, but is only implemented for CPU's")
             time_estimate = coeff_sparse_cpu * N * nbands * 100
 
-    elif method == "density_matrix_purification":
+    elif method == "density_matrix_minimization":
         # Matrix multiplications: O(N^3) actually for dense P
-        # Purification involves dense matrix multiplies P^2, P^3 even if H is sparse (fill-in).
+        # minimization involves dense matrix multiplies P^2, P^3 even if H is sparse (fill-in).
         # So it is O(N^3) per iteration unless P remains sparse (which it usually doesn't for metals/small gap).
         # If we assume dense:
         ops_per_iter = 4 * (N**3) # 2 matmuls (P^2, P^3) + overhead
@@ -185,7 +185,7 @@ def Get_optimal_solver(Hamiltonian, method="all", **kwargs):
     Returns:
         tuple: (optimal_method_name, estimated_time)
     """
-    methods = ["diagonalization", "sparse_diagonalization", "density_matrix_purification", "fermi_operator_expansion"]
+    methods = ["diagonalization", "sparse_diagonalization", "density_matrix_minimization", "fermi_operator_expansion"]
     
     best_method = None
     min_time = float('inf')
