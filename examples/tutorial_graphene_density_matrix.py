@@ -78,15 +78,15 @@ def run_tutorial():
     )
     print("Density Matrix:\n", dm_foe)
 
-    # 3. Density Matrix Purification
-    # Note: This is a T=0 method (canonical purification).
-    print("\nMethod: Density Matrix Purification")
-    dm_purification = Solve_Hamiltonian(
+    # 3. Density Matrix minimization
+    # Note: This is a T=0 method (canonical minimization).
+    print("\nMethod: Density Matrix minimization")
+    dm_minimization = Solve_Hamiltonian(
         H_torch, 
-        method="density_matrix_purification",
+        method="density_matrix_minimization",
         max_iterations=50
     )
-    print("Density Matrix:\n", dm_purification)
+    print("Density Matrix:\n", dm_minimization)
 
 if __name__ == "__main__":
     run_tutorial()

@@ -86,7 +86,7 @@
 <ol class="arabic simple">
 <li><p><strong>Diagonalization</strong> (Standard method)</p></li>
 <li><p><strong>Fermi Operator Expansion</strong> (Linear scaling, finite temperature)</p></li>
-<li><p><strong>Density Matrix Purification</strong> (Linear scaling, zero temperature)</p></li>
+<li><p><strong>Density Matrix minimization</strong> (Linear scaling, zero temperature)</p></li>
 </ol>
 <p><a class="reference external" href="https://pythtb.org/">PythTB</a> is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.</p>
 <p>First, import the necessary library and create the graphene Hamiltonian.</p>
@@ -125,7 +125,7 @@
 <span class="n">my_model</span> <span class="o">=</span> <span class="n">my_model</span><span class="o">.</span><span class="n">make_supercell</span><span class="p">([[</span><span class="n">supercell_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">supercell_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]]])</span>
 </pre></div>
 </div>
-<p>Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, and Density Matrix Purification solvers to compare the results.</p>
+<p>Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, and Density Matrix minimization solvers to compare the results.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate Hamiltonian at a specific k-point (or mesh)</span>
 <span class="c1"># Using a mesh as requested, but we&#39;ll select one k-point to solve</span>
 <span class="c1"># so we don&#39;t print 100 density matrices.</span>
@@ -162,15 +162,15 @@
 <span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Density Matrix:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dm_foe</span><span class="p">)</span>
 
-<span class="c1"># 3. Density Matrix Purification</span>
-<span class="c1"># Note: This is a T=0 method (canonical purification).</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Method: Density Matrix Purification&quot;</span><span class="p">)</span>
-<span class="n">dm_purification</span> <span class="o">=</span> <span class="n">Solve_Hamiltonian</span><span class="p">(</span>
+<span class="c1"># 3. Density Matrix minimization</span>
+<span class="c1"># Note: This is a T=0 method (canonical minimization).</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Method: Density Matrix minimization&quot;</span><span class="p">)</span>
+<span class="n">dm_minimization</span> <span class="o">=</span> <span class="n">Solve_Hamiltonian</span><span class="p">(</span>
     <span class="n">H</span><span class="p">,</span>
-    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;density_matrix_purification&quot;</span><span class="p">,</span>
+    <span class="n">method</span><span class="o">=</span><span class="s2">&quot;density_matrix_minimization&quot;</span><span class="p">,</span>
     <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span>
 <span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Density Matrix:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dm_purification</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Density Matrix:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">dm_minimization</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>

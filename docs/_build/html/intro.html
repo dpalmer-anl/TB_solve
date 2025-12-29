@@ -127,7 +127,7 @@ The following reference contains all details for each solver method listed here,
 <li><p><strong>Limitations</strong>: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (<span class="math notranslate nohighlight">\(S \neq I\)</span>). Requires user to determine convergence for number of moments (<code class="docutils literal notranslate"><span class="pre">n_moments</span></code>).(~200 is usually enough)</p></li>
 </ul>
 </li>
-<li><p><strong>Density Matrix Purification</strong> (<code class="docutils literal notranslate"><span class="pre">method=&quot;density_matrix_purification&quot;</span></code>)</p>
+<li><p><strong>Density Matrix minimization</strong> (<code class="docutils literal notranslate"><span class="pre">method=&quot;density_matrix_minimization&quot;</span></code>)</p>
 <ul class="simple">
 <li><p><strong>Description</strong>: An iterative method that converges the density matrix to the canonical ensemble at zero temperature (<span class="math notranslate nohighlight">\(T=0\)</span>) by enforcing idempotency (<span class="math notranslate nohighlight">\(P^2 = P\)</span>).</p></li>
 <li><p><strong>Best for</strong>: Very large systems (<span class="math notranslate nohighlight">\(N &gt; 10^5\)</span>), or as an alternative linear-scaling approach for ground state properties.</p></li>

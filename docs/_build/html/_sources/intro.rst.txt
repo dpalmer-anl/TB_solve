@@ -55,7 +55,7 @@ The following reference contains all details for each solver method listed here,
    * **Best for**: Very large systems (:math:`N > 10^5`), calculating local observables, and finite-temperature calculations.
    * **Limitations**: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (:math:`S \neq I`). Requires user to determine convergence for number of moments (``n_moments``).(~200 is usually enough)
 
-4. **Density Matrix Purification** (``method="density_matrix_purification"``)
+4. **Density Matrix minimization** (``method="density_matrix_minimization"``)
    
    * **Description**: An iterative method that converges the density matrix to the canonical ensemble at zero temperature (:math:`T=0`) by enforcing idempotency (:math:`P^2 = P`).
    * **Best for**: Very large systems (:math:`N > 10^5`), or as an alternative linear-scaling approach for ground state properties.
