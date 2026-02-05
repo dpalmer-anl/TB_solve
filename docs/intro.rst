@@ -61,3 +61,9 @@ The following reference contains all details for each solver method listed here,
    * **Best for**: Very large systems (:math:`N > 10^5`), or as an alternative linear-scaling approach for ground state properties.
    * **Limitations**: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (:math:`S \neq I`). 
 
+5. **PEXSI** (``method="PEXSI"``)
+   
+   * **Description**: A parallelized solver that uses the PEXSI algorithm to solve the density matrix.
+   * **Best for**: Very large systems (:math:`N > 10^5`), zero and finite temperature, metals and insulators.
+   * **Limitations**: CPU only. Does not provide individual eigenvalues. 
+   * **Parallelization**: Parallelized over real space pole inversions.
