@@ -166,6 +166,26 @@ def Solver_helper(Hamiltonian, method="diagonalization", nbands=None, max_iterat
                  time_estimate = (coeff * 0.1) * ops_per_moment * n_moments
             else:
                  time_estimate = coeff_mm_gpu * ops_per_moment * n_moments
+    
+    elif method == "divide_and_conquer":
+        # Cost dominated by dense diagonalizations of local sub-Hamiltonians
+        n_subsystems = kwargs.get("n_subsystems", None)
+        core_block_size = kwargs.get("core_block_size", None)
+        buffer_depth = kwargs.get("buffer_depth", 1)
+        
+        if n_subsystems is not None:
+            core_block_size = math.ceil(N / n_subsystems)
+            n_blocks = n_subsystems
+        else:
+            if core_block_size is None:
+                core_block_size = max(1, int(math.sqrt(N)))
+            n_blocks = math.ceil(N / core_block_size)
+        
+        # Buffer expands the local matrix; approximate growth factor
+        effective_block = core_block_size * (1 + 0.5 * buffer_depth)
+        ops = n_blocks * (effective_block ** 3)
+        coeff = coeff_diag_gpu if device.type != "cpu" else coeff_diag_cpu
+        time_estimate = coeff * ops
                  
     else:
         raise ValueError("Invalid method")
@@ -185,7 +205,7 @@ def Get_optimal_solver(Hamiltonian, method="all", **kwargs):
     Returns:
         tuple: (optimal_method_name, estimated_time)
     """
-    methods = ["diagonalization", "sparse_diagonalization", "density_matrix_minimization", "fermi_operator_expansion"]
+    methods = ["diagonalization", "sparse_diagonalization", "density_matrix_minimization", "fermi_operator_expansion", "divide_and_conquer"]
     
     best_method = None
     min_time = float('inf')

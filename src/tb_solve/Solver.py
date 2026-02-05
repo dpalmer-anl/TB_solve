@@ -1,8 +1,12 @@
 import torch
 from scipy.sparse.linalg import eigsh
 import math
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Sequence, Iterable, List
 import numpy as np
+from scipy.sparse import csc_matrix, coo_matrix
+from .cython_scripts.density_matrix_minimization_cy import density_matrix_minimization_cy
+from .cython_scripts.pexsi_wrapper import run_pexsi
+from mpi4py import MPI
 
 # Intel GPU device configuration
 def get_intel_gpu_device():
@@ -31,7 +35,82 @@ def get_intel_gpu_device():
 
 device, gpu_avail = get_intel_gpu_device()
 
-def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100, spin_degeneracy=2.0) -> torch.Tensor:
+def prepare_distributed_csc(global_H, comm, diag_shift: float = 1e-8):
+    """
+    Partitions a global Hamiltonian matrix into a distributed CSC format
+    suitable for PEXSI.
+    """
+    n_ranks = comm.Get_size()
+    mpirank = comm.Get_rank()
+    nrows = global_H.shape[0]
+    
+    # 1. Convert to Scipy CSC for easy slicing
+    if not isinstance(global_H, csc_matrix):
+        global_H = csc_matrix(global_H)
+    
+    # Apply a small diagonal shift if needed to avoid zero diagonal
+    if diag_shift is not None and diag_shift > 0:
+        diag_vals = global_H.diagonal()
+        if np.any(diag_vals == 0):
+            global_H = global_H + csc_matrix(np.eye(nrows) * diag_shift)
+
+    # 2. Determine column distribution (linear split)
+    cols_per_rank = nrows // n_ranks
+    start_col = mpirank * cols_per_rank
+    # The last rank takes any remaining columns
+    end_col = (mpirank + 1) * cols_per_rank if mpirank < n_ranks - 1 else nrows
+    
+    numColLocal = end_col - start_col
+    
+    # 3. Slice the local portion of the matrix
+    # local_H contains columns from start_col to end_col
+    local_H = global_H[:, start_col:end_col]
+    
+    # 4. Extract CSC arrays
+    # colptrLocal: start of each column in the rowind/nzval arrays
+    colptrLocal = local_H.indptr.astype(np.int32)
+    # rowindLocal: row indices of non-zero elements
+    rowindLocal = local_H.indices.astype(np.int32)
+    # HnzvalLocal: non-zero values
+    if np.iscomplexobj(local_H.data):
+        HnzvalLocal = np.ascontiguousarray(local_H.data, dtype=np.complex128)
+    else:
+        HnzvalLocal = np.ascontiguousarray(local_H.data, dtype=np.float64)
+    
+    # PEXSI expects 1-based indexing for CSC pointers/indices.
+    colptrLocal = (colptrLocal + 1).astype(np.int32, copy=False)
+    rowindLocal = (rowindLocal + 1).astype(np.int32, copy=False)
+    nnz = global_H.nnz
+
+    return nrows, nnz, colptrLocal, rowindLocal, HnzvalLocal
+
+def get_density_matrix_pexsi(Hamiltonian):
+    num_electrons = Hamiltonian.shape[0] 
+    comm = MPI.COMM_WORLD
+
+    # Define PEXSI process grid (e.g., for a 1D column distribution)
+    # Note: nprow * npcol must be <= total MPI ranks [cite: 366]
+    nprow = 1
+    npcol = comm.Get_size()
+
+    # Prepare local matrix data
+    nrows, nnz, colptr, rowind, h_vals = prepare_distributed_csc(Hamiltonian, comm)
+
+    # Call the Cython wrapper
+    # Returns the local non-zero values of the Density Matrix [cite: 351]
+    dm_local_nzval, rowind, colind, mu = run_pexsi(
+        comm, nprow, npcol, nrows, nnz, colptr, rowind, h_vals, num_electrons
+    )
+
+    return dm_local_nzval, rowind, colind, mu
+
+@torch.jit.script
+def fermi_operator_expansion(
+    Hamiltonian: torch.Tensor,
+    kbT: float = 1e-2,
+    n_moments: int = 100,
+    spin_degeneracy: float = 2.0,
+) -> torch.Tensor:
     """Calculate density matrix using Fermi operator expansion with Jackson damping.
     
     This method approximates the density matrix using a Chebyshev polynomial expansion
@@ -47,6 +126,8 @@ def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100,
     Returns:
         torch.Tensor: The calculated density matrix of shape (N,N).
     """
+    # TorchScript requires Python scalars for control-flow constructs
+    n_moments = int(n_moments)
     N = Hamiltonian.shape[0]
     device = Hamiltonian.device
 
@@ -107,7 +188,7 @@ def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100,
     
     # Number of quadrature points
     n_quad = 2 * n_moments
-    k = torch.arange(1, n_quad + 1, device=device).float()
+    k = torch.arange(1, n_quad + 1, device=device, dtype=torch.float32)
     x_k = torch.cos(math.pi * (k - 0.5) / n_quad)
     
     # Evaluate function at quadrature points
@@ -206,7 +287,24 @@ def fermi_operator_expansion(Hamiltonian: torch.Tensor, kbT=1e-2, n_moments=100,
             
     return rho * spin_degeneracy
 
-def density_matrix_minimization(H: torch.Tensor, epsilon=1e-6, max_iterations=100, spin_degeneracy=2.0) -> torch.Tensor:
+def density_matrix_minimization_cython(
+    H,
+    epsilon: float = 1e-6,
+    max_iterations: int = 100,
+    spin_degeneracy: float = 2.0):
+    if isinstance(H, torch.Tensor):
+        H_np_complex = H.detach().cpu().numpy().astype(np.complex128, copy=False)
+    else:
+        H_np_complex = np.ascontiguousarray(H)
+    return density_matrix_minimization_cy(H_np_complex, epsilon, max_iterations, spin_degeneracy)
+
+@torch.jit.script
+def density_matrix_minimization(
+    H: torch.Tensor,
+    epsilon: float = 1e-6,
+    max_iterations: int = 100,
+    spin_degeneracy: float = 2.0,
+) -> torch.Tensor:
     """Compute the density matrix using the canonical minimization method.
     
     This method iteratively refines an initial guess of the density matrix to achieve 
@@ -221,6 +319,9 @@ def density_matrix_minimization(H: torch.Tensor, epsilon=1e-6, max_iterations=10
     Returns:
         torch.Tensor: Purified density matrix of shape (N,N).
     """
+    # Cast scalar parameters for TorchScript compatibility
+    max_iterations = int(max_iterations)
+    epsilon_val = float(epsilon)
     N = H.shape[0]
     device = H.device
     N_e = N // 2
@@ -245,28 +346,26 @@ def density_matrix_minimization(H: torch.Tensor, epsilon=1e-6, max_iterations=10
     # Check for singular cases
     if H_max == H_min:
          # H is a scalar multiple of identity or zero
-         # Avoid division by zero
-         lambda_val = 1.0 # Or appropriate fallback
+         # Avoid division by zero; keep tensor type for TorchScript
+         lambda_val = torch.tensor(1.0, device=device, dtype=H.dtype if H.is_complex() else torch.float32)
     else:
         # Calculate lambda = min[N_e/(H_max - mu), (N-N_e)/(mu - H_min)]
         # Use real part of mu for bounds
         mu_real = mu.real
+        n_e_tensor = torch.tensor(float(N_e), device=device, dtype=mu_real.dtype)
+        n_minus_n_e_tensor = torch.tensor(float(N - N_e), device=device, dtype=mu_real.dtype)
         
-        # Avoid division by zero
+        # Avoid division by zero; keep tensor types for TorchScript
         term1_denom = (H_max - mu_real)
         term2_denom = (mu_real - H_min)
         
-        if abs(term1_denom) < 1e-12:
-            lambda_term1 = float('inf')
-        else:
-            lambda_term1 = N_e / term1_denom
+        inf_tensor1 = torch.full_like(term1_denom, float('inf'))
+        inf_tensor2 = torch.full_like(term2_denom, float('inf'))
+        
+        lambda_term1 = torch.where(torch.abs(term1_denom) < 1e-12, inf_tensor1, n_e_tensor / term1_denom)
+        lambda_term2 = torch.where(torch.abs(term2_denom) < 1e-12, inf_tensor2, n_minus_n_e_tensor / term2_denom)
             
-        if abs(term2_denom) < 1e-12:
-            lambda_term2 = float('inf')
-        else:
-            lambda_term2 = (N - N_e) / term2_denom
-            
-        lambda_val = min(lambda_term1, lambda_term2)
+        lambda_val = torch.minimum(lambda_term1, lambda_term2)
 
     I = torch.eye(N, device=device)
     # Ensure P is same dtype as H (complex) if needed
@@ -276,6 +375,8 @@ def density_matrix_minimization(H: torch.Tensor, epsilon=1e-6, max_iterations=10
     P = (lambda_val / N) * (mu * I - H) + (N_e / N) * I
 
     # McWeeny minimization iterations
+    iteration = -1
+    energy_change = float('inf')
     for iteration in range(max_iterations):
         # Calculate current energy E = tr(PH)
         E_old = torch.real(torch.trace(P @ H))
@@ -308,10 +409,10 @@ def density_matrix_minimization(H: torch.Tensor, epsilon=1e-6, max_iterations=10
         
         # Check convergence based on energy change
         energy_change = abs(E_new - E_old)
-        if energy_change < epsilon:
+        if energy_change < epsilon_val:
             break
     
-    if iteration == max_iterations - 1:
+    if max_iterations > 0 and iteration == max_iterations - 1 and energy_change >= epsilon_val:
         print(f"Warning: Density matrix minimization did not converge after {max_iterations} iterations")
     
     return P * spin_degeneracy
@@ -360,6 +461,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             - "sparse_diagonalization": Sparse diagonalization using ARPACK (CPU only).
             - "density_matrix_minimization": Linear scaling minimization (T=0).
             - "fermi_operator_expansion": Linear scaling Chebyshev expansion (finite T).
+            - "divide_and_conquer": Local diagonalizations with buffer regions.
         return_eigvals (bool, optional): Whether to return eigenvalues. Defaults to False.
         return_eigvecs (bool, optional): Whether to return eigenvectors. Defaults to False.
         return_density_matrix (bool, optional): Whether to return the density matrix. 
@@ -373,6 +475,10 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             - epsilon (float): Convergence threshold for minimization.
             - max_iterations (int): Max iterations for minimization.
             - spin_degeneracy (float): Spin degeneracy factor.
+            - neighbor_list (Sequence[Iterable[int]]): Required for divide_and_conquer.
+            - n_subsystems (int): Optional number of subsystems for divide_and_conquer.
+            - core_block_size (int): Alternative subsystem size control.
+            - buffer_depth (int): Buffer depth in neighbor hops.
 
     Returns:
         torch.Tensor or Tuple: By default, returns the density matrix (torch.Tensor).
@@ -386,7 +492,7 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
         pass # Checks are done in specific blocks below for better error messages or we can keep them here.
     
     # Validation checks
-    if method in ["density_matrix_minimization", "fermi_operator_expansion"]:
+    if method in ["density_matrix_minimization", "fermi_operator_expansion", "pexsi"]:
          # These checks are redundant with the specific blocks but good for early exit
          pass
 
@@ -457,9 +563,12 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
         if return_eigvals or return_eigvecs:
              raise ValueError("return_eigvals/eigvecs not supported for density matrix minimization. Only supports return_density_matrix=True.")
         
-        epsilon = kwargs.get('epsilon', 1e-6)
-        max_iterations = kwargs.get('max_iterations', 100)
-        return density_matrix_minimization(Hamiltonian, epsilon=epsilon, max_iterations=max_iterations)
+        epsilon = kwargs.get('epsilon', 1e-4)
+        max_iterations = kwargs.get('max_iterations', 50)
+        if device.type == "cuda":
+            return density_matrix_minimization(Hamiltonian, epsilon=epsilon, max_iterations=max_iterations)
+        else:
+            return density_matrix_minimization_cython(Hamiltonian, epsilon=epsilon, max_iterations=max_iterations)
         
     elif method == "fermi_operator_expansion":
         if Overlap is not None:
@@ -472,6 +581,15 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
         spin_degeneracy = kwargs.get('spin_degeneracy', 2.0)
         return fermi_operator_expansion(Hamiltonian, kbT=kbT, n_moments=n_moments, spin_degeneracy=spin_degeneracy)
         
+    elif method == "pexsi":
+        if Overlap is not None:
+            raise ValueError("Overlap not supported for PEXSI")
+        if return_eigvals or return_eigvecs:
+            raise ValueError("return_eigvals/eigvecs not supported for PEXSI. Only supports return_density_matrix=True.")
+        dm_vals, rowind, colind, _mu = get_density_matrix_pexsi(Hamiltonian)
+        dm_sparse = coo_matrix((dm_vals, (rowind, colind)), shape=(Hamiltonian.shape[0], Hamiltonian.shape[1]))
+        return torch.from_numpy(dm_sparse.toarray())
+
     else:
         raise ValueError("Invalid method")
 
@@ -487,6 +605,9 @@ if __name__=="__main__":
     Hamiltonian[0,N-1] = t
     Hamiltonian[N-1,0] = t
     print(Hamiltonian)
+
+    density_matrix_pexsi = get_density_matrix_pexsi(Hamiltonian)
+    print("PEXSI density matrix = \n", torch.round(density_matrix_pexsi, decimals=3))
     
     # Needs sufficient moments for low temperature to capture the step function
     density_matrix = Solve_Hamiltonian(Hamiltonian, method="fermi_operator_expansion", kbT=Temperature, n_moments=100)
@@ -496,3 +617,5 @@ if __name__=="__main__":
     print("Diagonalization density matrix =\n", torch.round(density_matrix_diag, decimals=3))
     
     print("Difference norm:", torch.norm(density_matrix - density_matrix_diag))
+
+    

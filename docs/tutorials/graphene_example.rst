@@ -6,6 +6,7 @@ This tutorial demonstrates how to calculate the density matrix of graphene using
 1. **Diagonalization** (Standard method)
 2. **Fermi Operator Expansion** (Linear scaling, finite temperature)
 3. **Density Matrix minimization** (Linear scaling, zero temperature)
+4. **PEXSI** (O(N^(d+1)/2) scaling where d is the number of dimensions, zero and finite temperature, metals and insulators)
 
 `PythTB <https://pythtb.org/>`_ is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.
 
@@ -47,7 +48,7 @@ First, import the necessary library and create the graphene Hamiltonian.
 
    my_model = my_model.make_supercell([[supercell_size[0], 1], [1, supercell_size[1]]])
 
-Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, and Density Matrix minimization solvers to compare the results.
+Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, Density Matrix minimization and PEXSI solvers to compare the results.
 
 .. code-block:: python
     
@@ -96,4 +97,14 @@ Next, we can solve the Hamiltonian for the density matrix. We will use the diago
         max_iterations=50
     )
     print("Density Matrix:\n", dm_minimization)
+
+    # 4. PEXSI
+    # Note: This works for zero temperature and finite temperature. insulators and metals
+    print("\nMethod: PEXSI")
+    dm_pexsi = Solve_Hamiltonian(
+        H, 
+        method="PEXSI",
+    )
+    print("Density Matrix:\n", dm_pexsi)
+
 
