@@ -46,7 +46,7 @@ First, import the necessary library and create the graphene Hamiltonian.
 
    my_model = my_model.make_supercell([[supercell_size[0], 1], [1, supercell_size[1]]])
 
-Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, Fermi Operator Expansion, Density Matrix minimization and PEXSI solvers to compare the results.
+Next, we can solve the Hamiltonian for the density matrix. We will use the diagonalization, and PEXSI solvers to compare the results.
 
 .. code-block:: python
     
@@ -74,6 +74,8 @@ Next, we can solve the Hamiltonian for the density matrix. We will use the diago
 
     # 2. PEXSI
     # Note: This works for zero temperature and finite temperature. insulators and metals
+    # PEXSI will only return the elements of the density matrix where H is non-zero.
+    # This is useful, since these are the only elements we need to compute the total band energy and the forces on the atoms.
     print("\nMethod: PEXSI")
     dm_pexsi = Solve_Hamiltonian(
         H, 

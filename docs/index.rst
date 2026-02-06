@@ -8,8 +8,8 @@ Welcome to TB_solve's documentation!
 
 **TB_solve** is a Python library for solving tight binding models. It includes solvers of varying complexity:
 
-* Direct Diagonalization
-* Sparse Diagonalization (Lanczos/ARPACK, Linear Scaling)
+* Direct Diagonalization (O(N^3) scaling)
+* Sparse Diagonalization (Lanczos/ARPACK, O(N) scaling)
 * PEXSI (O(N^(d+1)/2) scaling where d is the number of dimensions, zero and finite temperature, metals and insulators)
 
 .. toctree::

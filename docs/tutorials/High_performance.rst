@@ -3,9 +3,7 @@ High Performance Solvers Tutorial
 
 This tutorial demonstrates how to use the high performance solvers provided by ``tb_solve``:
 
-1. **PEXSI** (CPU only, MPI parallelization over real space pole inversions)(O(N^(d+1)/2) scaling where d is the number of dimensions, zero and finite temperature, metals and insulators)
-can be parallelized up to 10,000 cores reliably. Note that this solver is only implemented for cpu currently and Gamma point calculations. 
-While this seems like a limitation for metals, it is not if the system is large enough. A large system in real space will converge to the same energy as a small system with a dense k-point mesh.
+1. **PEXSI** (CPU only, MPI parallelization over real space pole inversions)(O(N^(d+1)/2) scaling where d is the number of dimensions, zero and finite temperature, metals and insulators) can be parallelized up to 10,000 cores reliably. Note that this solver is only implemented for cpu currently and Gamma point calculations. While this seems like a limitation for metals, it is not if the system is large enough. A large system in real space will converge to the same energy as a small system with a dense k-point mesh.
 
 2. **Direct Diagonalization** (GPU or CPU, MPI parallelization over K-points)(O(N^3) scaling, zero and finite temperature, metals and insulators)
 

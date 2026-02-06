@@ -32,6 +32,9 @@ From the density matrix, we can compute the total band energy and the forces on 
 .. math::
 
    E_{\text{band}} = \text{Tr}(\rho H) = \rho \cdot H
+
+.. math::
+   
    F_{i} = -\nabla_{\mathbf{R}_i} E_{\text{band}} = -\rho \cdot \nabla_{\mathbf{R}_i} (H)
 
 Solver Methods
