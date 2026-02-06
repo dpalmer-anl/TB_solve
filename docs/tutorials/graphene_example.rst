@@ -4,9 +4,7 @@ Graphene Density Matrix Tutorial
 This tutorial demonstrates how to calculate the density matrix of graphene using three different solvers provided by ``tb_solve``:
 
 1. **Diagonalization** (Standard method)
-2. **Fermi Operator Expansion** (Linear scaling, finite temperature)
-3. **Density Matrix minimization** (Linear scaling, zero temperature)
-4. **PEXSI** (O(N^(d+1)/2) scaling where d is the number of dimensions, zero and finite temperature, metals and insulators)
+2. **PEXSI** (O(N^(d+1)/2) scaling where d is the number of dimensions, zero and finite temperature, metals and insulators)
 
 `PythTB <https://pythtb.org/>`_ is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.
 
@@ -74,31 +72,7 @@ Next, we can solve the Hamiltonian for the density matrix. We will use the diago
     dm_diag = Solve_Hamiltonian(H, method="diagonalization")
     print("Density Matrix:\n", dm_diag)
 
-    # 2. Fermi Operator Expansion
-    # Note: This is a finite temperature method. To approximate zero temperature, set kbT to a small value.
-    # For Graphene (gapless/semimetal), results depend on T and chemical potential.
-    # Solve_Hamiltonian estimates mu = trace(H)/N which is 0 for this model.
-    print("\nMethod: Fermi Operator Expansion")
-    # Using a small temperature and sufficient moments
-    dm_foe = Solve_Hamiltonian(
-        H, 
-        method="fermi_operator_expansion", 
-        kbT=0.01, 
-        n_moments=200
-    )
-    print("Density Matrix:\n", dm_foe)
-
-    # 3. Density Matrix minimization
-    # Note: This is a T=0 method (canonical minimization).
-    print("\nMethod: Density Matrix minimization")
-    dm_minimization = Solve_Hamiltonian(
-        H, 
-        method="density_matrix_minimization",
-        max_iterations=50
-    )
-    print("Density Matrix:\n", dm_minimization)
-
-    # 4. PEXSI
+    # 2. PEXSI
     # Note: This works for zero temperature and finite temperature. insulators and metals
     print("\nMethod: PEXSI")
     dm_pexsi = Solve_Hamiltonian(

@@ -27,6 +27,12 @@ For many physical applications, we are interested in two main quantities:
    \rho_{\mu\nu} = \sum_{i=1}^{N_{occ}} c^*_{\mu,i} c_{\nu,i} 
 
 where :math:`c_{\mu,i}` are the coefficients of the :math:`i`-th occupied eigenvector :math:`\psi_{i}`.
+From the density matrix, we can compute the total band energy and the forces on the atoms.
+
+.. math::
+
+   E_{\text{band}} = \text{Tr}(\rho H) = \rho \cdot H
+   F_{i} = -\nabla_{\mathbf{R}_i} E_{\text{band}} = -\rho \cdot \nabla_{\mathbf{R}_i} (H)
 
 Solver Methods
 --------------
@@ -34,8 +40,7 @@ Solver Methods
 TB_solve provides multiple solver methods tailored for different system sizes, sparsity patterns, and physical requirements. 
 TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods (including intel gpu's!). 
 tb_solve.Solver() will automatically detect available devices and prioritize using GPU if available. 
-The following reference contains all details for each solver method listed here, (amongst others): https://doi.org/10.1103/RevModPhys.71.1085
-
+The PEXSI solver is based on the PEXSI algorithm, which is described in the following reference: https://pexsi.readthedocs.io/en/latest/introduction.html
 1. **Diagonalization** (``method="diagonalization"``)
    
    * **Description**: Performs a full dense diagonalization of the Hamiltonian.
@@ -48,20 +53,7 @@ The following reference contains all details for each solver method listed here,
    * **Best for**: Large sparse systems where only a few bands (``nbands``) are required. Useful for finding band structure near the fermi level.
    * **Limitations**: CPU-only implementation currently. Does not efficiently compute the full density matrix. 
 
-3. **Fermi Operator Expansion** (``method="fermi_operator_expansion"``)
-   
-   * **Description**: A linear-scaling :math:`O(N)` method (for sparse matrices) that approximates the density matrix using a Chebyshev polynomial expansion of the Fermi-Dirac distribution.
-   * **Feature**: Includes **Jackson kernel damping**, which suppresses Gibbs oscillations, making it robust and accurate even for metallic systems at low temperatures.
-   * **Best for**: Very large systems (:math:`N > 10^5`), calculating local observables, and finite-temperature calculations.
-   * **Limitations**: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (:math:`S \neq I`). Requires user to determine convergence for number of moments (``n_moments``).(~200 is usually enough)
-
-4. **Density Matrix minimization** (``method="density_matrix_minimization"``)
-   
-   * **Description**: An iterative method that converges the density matrix to the canonical ensemble at zero temperature (:math:`T=0`) by enforcing idempotency (:math:`P^2 = P`).
-   * **Best for**: Very large systems (:math:`N > 10^5`), or as an alternative linear-scaling approach for ground state properties.
-   * **Limitations**: Does not provide individual eigenvalues. Does not currently work with Overlap matrices (:math:`S \neq I`). 
-
-5. **PEXSI** (``method="PEXSI"``)
+3. **PEXSI** (``method="PEXSI"``)
    
    * **Description**: A parallelized solver that uses the PEXSI algorithm to solve the density matrix.
    * **Best for**: Very large systems (:math:`N > 10^5`), zero and finite temperature, metals and insulators.

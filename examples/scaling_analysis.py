@@ -4,7 +4,6 @@ from pythtb import TBModel, Lattice
 from tb_solve import Solve_Hamiltonian
 import time
 import matplotlib.pyplot as plt
-from scipy.linalg import eigh_tridiagonal
 
 def create_graphene_hamiltonian(supercell_size=[5, 5]):
     """
@@ -66,12 +65,7 @@ if __name__ == "__main__":
         start_time = time.time()
         _,_ = eigh_tridiagonal(np.zeros(natoms), -2.7*np.ones(natoms-1))
         tri_diag_time.append(time.time() - start_time)
-        # start_time = time.time()
-        # dmm_density_matrix = Solve_Hamiltonian(H_torch, method="density_matrix_minimization")
-        # dmm_time.append(time.time() - start_time)
-        # start_time = time.time()
-        # foe_density_matrix = Solve_Hamiltonian(H_torch, method="fermi_operator_expansion")
-        # foe_time.append(time.time() - start_time)
+        
 
     ham_dim_continuous = np.linspace(min(ham_dim), max(ham_dim),1000)
     dmm_fit = np.polyfit(ham_dim, dmm_time, 2)

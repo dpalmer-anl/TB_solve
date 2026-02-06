@@ -64,29 +64,9 @@ def run_tutorial():
     dm_diag = Solve_Hamiltonian(H_torch, method="diagonalization")
     print("Density Matrix:\n", dm_diag)
 
-    # 2. Fermi Operator Expansion
-    # Note: This is a finite temperature method. 
-    # For Graphene (gapless/semimetal), results depend on T and chemical potential.
-    # Solve_Hamiltonian estimates mu = trace(H)/N which is 0 for this model.
-    print("\nMethod: Fermi Operator Expansion")
-    # Using a small temperature and sufficient moments
-    dm_foe = Solve_Hamiltonian(
-        H_torch, 
-        method="fermi_operator_expansion", 
-        kbT=0.01, 
-        n_moments=200
-    )
-    print("Density Matrix:\n", dm_foe)
-
-    # 3. Density Matrix minimization
-    # Note: This is a T=0 method (canonical minimization).
-    print("\nMethod: Density Matrix minimization")
-    dm_minimization = Solve_Hamiltonian(
-        H_torch, 
-        method="density_matrix_minimization",
-        max_iterations=50
-    )
-    print("Density Matrix:\n", dm_minimization)
+    print("\nMethod: PEXSI")
+    dm_pexsi = Solve_Hamiltonian(H_torch, method="pexsi")
+    print("Density Matrix:\n", dm_pexsi)
 
 if __name__ == "__main__":
     run_tutorial()
