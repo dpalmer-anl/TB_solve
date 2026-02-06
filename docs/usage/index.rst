@@ -3,6 +3,14 @@ Usage
 
 Installation
 ------------
+Install dependencies in a conda environment:
+
+.. code-block:: bash
+
+   pip install numpy scipy mpi4py
+   conda install conda-forge::parmetis
+   conda install conda-forge::superlu_dis
+   conda install conda-forge::pexsi
 
 To install TB_solve, use pip:
 
