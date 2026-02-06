@@ -78,7 +78,8 @@ cdef extern from "c_pexsi_interface.h":
 
 def run_pexsi(comm, int nprow, int npcol, int nrows, int nnz,
                   int[:] colptrLocal, int[:] rowindLocal,
-                  HnzvalLocal, double num_electrons):
+                  HnzvalLocal, double num_electrons,
+                  double temperature, int numPole):
     
     cdef mpi.MPI_Comm c_comm = (<MPI.Comm>comm).ob_mpi
     cdef int mpirank = comm.Get_rank()
@@ -92,9 +93,9 @@ def run_pexsi(comm, int nprow, int npcol, int nrows, int nnz,
     # 2. Set Options
     cdef PPEXSIOptions options
     PPEXSISetDefaultOptions(&options)
-    options.temperature = 0.019
+    options.temperature = temperature
     options.method = 2
-    options.numPole = 20
+    options.numPole = numPole
     # For single-process runs, ensure point parallelization is 1.
     options.nPoints = 1
     # Avoid zero-diagonal failures in SuperLU_DIST symbolic factorization.

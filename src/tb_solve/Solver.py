@@ -83,7 +83,7 @@ def prepare_distributed_csc(global_H, comm, diag_shift: float = 1e-8):
 
     return nrows, nnz, colptrLocal, rowindLocal, HnzvalLocal
 
-def get_density_matrix_pexsi(Hamiltonian):
+def get_density_matrix_pexsi(Hamiltonian, temperature: float, numPoles: int):
     num_electrons = Hamiltonian.shape[0] 
     comm = MPI.COMM_WORLD
 
@@ -98,7 +98,17 @@ def get_density_matrix_pexsi(Hamiltonian):
     # Call the Cython wrapper
     # Returns the local non-zero values of the Density Matrix [cite: 351]
     dm_local_nzval, rowind, colind, mu = run_pexsi(
-        comm, nprow, npcol, nrows, nnz, colptr, rowind, h_vals, num_electrons
+        comm,
+        nprow,
+        npcol,
+        nrows,
+        nnz,
+        colptr,
+        rowind,
+        h_vals,
+        num_electrons,
+        temperature,
+        numPoles,
     )
 
     return dm_local_nzval, rowind, colind, mu
@@ -129,9 +139,20 @@ def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Ten
     
     return eigvals, eigvecs
 
-def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization", 
-                        return_eigvals=False, return_eigvecs=False, return_density_matrix=True, 
-                        nbands=20, which='LM',fermi_level=0,**kwargs) -> torch.Tensor:
+def Solve_Hamiltonian(
+    Hamiltonian,
+    Overlap=None,
+    method="diagonalization",
+    return_eigvals=False,
+    return_eigvecs=False,
+    return_density_matrix=True,
+    nbands=20,
+    which="LM",
+    fermi_level=0,
+    numPoles=50,
+    temperature=0.01,
+    **kwargs,
+) -> torch.Tensor:
     """Solve the Hamiltonian using the specified method.
     
     This is the main entry point for solving tight-binding Hamiltonians. It supports
@@ -236,7 +257,9 @@ def Solve_Hamiltonian(Hamiltonian, Overlap=None, method="diagonalization",
             raise ValueError("Overlap not supported for PEXSI")
         if return_eigvals or return_eigvecs:
             raise ValueError("return_eigvals/eigvecs not supported for PEXSI. Only supports return_density_matrix=True.")
-        dm_vals, rowind, colind, _mu = get_density_matrix_pexsi(Hamiltonian)
+        dm_vals, rowind, colind, _mu = get_density_matrix_pexsi(
+            Hamiltonian, temperature=temperature, numPoles=numPoles
+        )
         dm_sparse = coo_matrix((dm_vals, (rowind, colind)), shape=(Hamiltonian.shape[0], Hamiltonian.shape[1]))
         return torch.from_numpy(dm_sparse.toarray())
 

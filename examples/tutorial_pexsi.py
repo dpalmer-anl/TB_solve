@@ -27,7 +27,7 @@ def run():
     #H_torch = torch.from_numpy(H_numpy)
 
     # PEXSI returns local CSC values and indices
-    rho_vals, rho_row, rho_col, mu = get_density_matrix_pexsi(H_numpy)
+    rho_vals, rho_row, rho_col, mu = get_density_matrix_pexsi(H_numpy, temperature=0.01, numPoles=50)
     rho_sparse = coo_matrix((rho_vals, (rho_row, rho_col)), shape=H_numpy.shape)
     rho_dense = rho_sparse.toarray()
 

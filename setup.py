@@ -1,11 +1,7 @@
 from setuptools import setup, Extension, find_packages
 import os
 import sys
-
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    cythonize = None
+from Cython.Build import cythonize
 
 
 def check_for_lib(lib_name):
@@ -17,10 +13,6 @@ def check_for_lib(lib_name):
 
 
 def build_extensions():
-    # Build the native extension only when explicitly requested.
-    if os.environ.get("TB_SOLVE_BUILD_EXT") != "1":
-        return []
-
     try:
         import numpy
     except ImportError as exc:
@@ -72,7 +64,7 @@ setup(
     version="0.1",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    ext_modules=cythonize(ext_modules, language_level="3") if ext_modules else [],
+    ext_modules=cythonize(ext_modules, language_level="3"),
     install_requires=[
         "numpy",
         "scipy",
