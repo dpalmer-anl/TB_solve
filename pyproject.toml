@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel", "Cython", "numpy>=2.0","scipy","mpi4py"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "tb_solve"
 version = "0.1.0"
 authors = [
-  { name="Daniel Palmer", email="dpalmer@example.com" },
+  { name="Daniel Palmer", email="dpalmer3@illinois.edu" },
 ]
 description = "Python solver library for tight binding models"
 readme = "README.md"
@@ -20,6 +20,7 @@ dependencies = [
     "torch>=1.10.0",
     "scipy",
     "numpy",
+    "Cython"
 ]
 
 [project.urls]
