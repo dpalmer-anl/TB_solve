@@ -1,9 +1,13 @@
 from setuptools import setup, Extension, find_packages
-from Cython.Build import cythonize
 import numpy
 import os
 import sys
 import mpi4py
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    cythonize = None
+
 
 def check_for_lib(lib_name):
     import ctypes.util
