@@ -1,9 +1,10 @@
 import torch
+import scipy.linalg
 from scipy.sparse.linalg import eigsh
 import math
-from typing import Tuple, Optional, Sequence, Iterable, List
+from typing import Tuple, Optional, Sequence, Iterable, List, Union
 import numpy as np
-from scipy.sparse import csc_matrix, coo_matrix
+from scipy.sparse import csc_matrix, coo_matrix, issparse
 from .cython_scripts.pexsi_wrapper import run_pexsi
 from mpi4py import MPI
 
@@ -114,24 +115,30 @@ def get_density_matrix_pexsi(Hamiltonian, temperature: float, numPoles: int):
     return dm_local_nzval, rowind, colind, mu
 
 def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    """PyTorch-optimized generalized eigenvalue solver.
-    
-    Solves the generalized eigenvalue problem A @ v = lambda * B @ v.
-    
+    """PyTorch-optimized generalized eigenvalue solver for torch.Tensor inputs.
+
+    Solves the generalized eigenvalue problem A @ v = lambda * B @ v using
+    GPU-accelerated PyTorch operations. Both inputs must be ``torch.Tensor``.
+    For numpy or sparse inputs use ``scipy.linalg.eigh`` directly, or pass
+    the matrices through :func:`Solve_Hamiltonian` which dispatches
+    automatically based on input type.
+
     Args:
-        A (torch.Tensor): Hermitian matrix A.
-        B (torch.Tensor): Positive-definite matrix B (e.g., Overlap matrix).
+        A (torch.Tensor): Hermitian matrix A of shape ``(N, N)``.
+        B (torch.Tensor): Positive-definite overlap matrix B of shape ``(N, N)``.
 
     Returns:
         Tuple[torch.Tensor, torch.Tensor]: A tuple containing:
-            - eigvals (torch.Tensor): The eigenvalues.
-            - eigvecs (torch.Tensor): The eigenvectors.
+            - eigvals (torch.Tensor): Real eigenvalues of shape ``(N,)``,
+              sorted in ascending order.
+            - eigvecs (torch.Tensor): B-orthonormal eigenvectors of shape
+              ``(N, N)``, where column ``i`` corresponds to ``eigvals[i]``.
     """
     Binv = torch.linalg.inv(B)
     renorm_A = Binv @ A
     eigvals, eigvecs = torch.linalg.eigh(renorm_A)
     
-    # Normalize eigenvectors
+    # Normalize eigenvectors with respect to B
     Q = eigvecs.conj().T @ B @ eigvecs
     U = torch.linalg.cholesky(torch.linalg.inv(Q))
     eigvecs = eigvecs @ U
@@ -139,74 +146,147 @@ def generalized_eigen_torch(A: torch.Tensor, B: torch.Tensor) -> Tuple[torch.Ten
     
     return eigvals, eigvecs
 
-def Solve_Hamiltonian(
-    Hamiltonian,
-    Overlap=None,
-    method="diagonalization",
-    return_eigvals=False,
-    return_eigvecs=False,
-    return_density_matrix=True,
-    nbands=20,
-    which="LM",
-    fermi_level=0,
-    numPoles=50,
-    temperature=0.01,
-    **kwargs,
-) -> torch.Tensor:
-    """Solve the Hamiltonian using the specified method.
-    
-    This is the main entry point for solving tight-binding Hamiltonians. It supports
-    various methods including full diagonalization, sparse diagonalization, density 
-    matrix minimization, and Fermi operator expansion.
-    
-    Args:
-        Hamiltonian (torch.Tensor): The Hamiltonian matrix of shape (N,N).
-        Overlap (torch.Tensor, optional): The Overlap matrix for generalized eigenvalue problems.
-            Defaults to None. Not supported for all methods.
-        method (str, optional): The solver method to use. Options are:
-            - "diagonalization": Full diagonalization (default).
-            - "sparse_diagonalization": Sparse diagonalization using ARPACK (CPU only).
-            - "pexsi": Parallelized PEXSI solver (CPU only).
-        return_eigvals (bool, optional): Whether to return eigenvalues. Defaults to False.
-        return_eigvecs (bool, optional): Whether to return eigenvectors. Defaults to False.
-        return_density_matrix (bool, optional): Whether to return the density matrix. 
-            Defaults to True. Note: Some methods only support specific return types.
-        nbands (int, optional): Number of bands to compute for sparse diagonalization. Defaults to 20.
-        which (str, optional): Which eigenvalues to find for sparse diagonalization (e.g., 'LM', 'SA'). 
-            Defaults to 'LM' (Largest Magnitude).
-        **kwargs: Additional keyword arguments passed to the specific solver methods.
-            - kbT (float): Temperature for Fermi operator expansion.
-            - spin_degeneracy (float): Spin degeneracy factor.
+def _detect_input_type(H) -> str:
+    """Return a string tag for the matrix type of *H*.
 
     Returns:
-        torch.Tensor or Tuple: By default, returns the density matrix (torch.Tensor).
-        If multiple return flags are set, returns a tuple.
-        Note: The return type depends on the requested outputs and the method used.
-    
-    Raises:
-        ValueError: If an invalid method is specified or incompatible arguments are provided.
+        str: One of ``'torch'``, ``'csc'``, or ``'numpy'``.
     """
-    # Validation checks
-    if method in ["pexsi"]:
-         # These checks are redundant with the specific blocks but good for early exit
-         pass
+    if isinstance(H, torch.Tensor):
+        return 'torch'
+    elif issparse(H):
+        return 'csc'
+    else:
+        return 'numpy'
 
-    if not isinstance(Hamiltonian, torch.Tensor) and method != "sparse_diagonalization":
-        Hamiltonian = torch.tensor(Hamiltonian)
-        if Overlap is not None:
-            Overlap = torch.tensor(Overlap)
-    elif method == "sparse_diagonalization":
-        if not isinstance(Hamiltonian, np.ndarray):
-            Hamiltonian = np.array(Hamiltonian)
-            if Overlap is not None:
-                Overlap = np.array(Overlap)
-        Hamiltonian = np.squeeze(Hamiltonian)
-        if Overlap is not None:
-            Overlap = np.squeeze(Overlap)
 
+def Solve_Hamiltonian(
+    Hamiltonian: Union[torch.Tensor, np.ndarray, csc_matrix],
+    Overlap: Union[torch.Tensor, np.ndarray, csc_matrix, None] = None,
+    method: str = "diagonalization",
+    return_eigvals: bool = False,
+    return_eigvecs: bool = False,
+    return_density_matrix: bool = True,
+    nbands: int = 20,
+    which: str = "LM",
+    fermi_level: float = 0,
+    numPoles: int = 50,
+    temperature: float = 0.01,
+    **kwargs,
+):
+    """Solve the Hamiltonian using the specified method.
+
+    This is the main entry point for solving tight-binding Hamiltonians. It
+    supports full diagonalization, sparse diagonalization, and the PEXSI
+    Fermi-operator expansion.
+
+    **Input / output type matching**
+
+    The function accepts ``torch.Tensor``, ``numpy.ndarray``, or any SciPy
+    sparse matrix (internally converted to ``csc_matrix``) for both
+    ``Hamiltonian`` and ``Overlap``.  The *same* type is used for all
+    returned arrays:
+
+    +-------------------+------------------------------------------+-------------------------------------------+
+    | Input type        | ``diagonalization`` solver               | Returned arrays                           |
+    +===================+==========================================+===========================================+
+    | ``torch.Tensor``  | :func:`generalized_eigen_torch` (with S) | ``torch.Tensor``                          |
+    |                   | or ``torch.linalg.eigh`` (without S)     |                                           |
+    +-------------------+------------------------------------------+-------------------------------------------+
+    | ``numpy.ndarray`` | ``scipy.linalg.eigh``                    | ``numpy.ndarray``                         |
+    +-------------------+------------------------------------------+-------------------------------------------+
+    | ``csc_matrix``    | ``scipy.linalg.eigh`` on dense view      | ``numpy.ndarray`` (eigvals/eigvecs),      |
+    |                   |                                          | ``csc_matrix`` (density matrix)           |
+    +-------------------+------------------------------------------+-------------------------------------------+
+
+    For ``sparse_diagonalization``, SciPy's ``eigsh`` always returns
+    ``numpy.ndarray`` regardless of input type (this is a limitation of
+    ARPACK).  For ``pexsi``, the density matrix is returned as
+    ``torch.Tensor``, ``numpy.ndarray``, or ``csc_matrix`` matching the input.
+
+    Args:
+        Hamiltonian (torch.Tensor | numpy.ndarray | csc_matrix):
+            The Hamiltonian matrix of shape ``(N, N)``.
+        Overlap (torch.Tensor | numpy.ndarray | csc_matrix | None, optional):
+            Overlap matrix for generalized eigenvalue problems.  Must be the
+            same type as ``Hamiltonian``.  Defaults to ``None``.  Not
+            supported by the ``pexsi`` method.
+        method (str, optional): Solver to use. Options:
+
+            - ``"diagonalization"`` – Full dense diagonalization (default).
+              Dispatches to PyTorch or SciPy depending on input type.
+            - ``"sparse_diagonalization"`` – Iterative sparse solver via
+              ARPACK (CPU only). Output is always ``numpy.ndarray``.
+            - ``"pexsi"`` – Parallelized Fermi-operator expansion (CPU / MPI).
+
+        return_eigvals (bool, optional): Include eigenvalues in the return
+            value. Defaults to ``False``.
+        return_eigvecs (bool, optional): Include eigenvectors in the return
+            value. Defaults to ``False``.
+        return_density_matrix (bool, optional): Include the density matrix in
+            the return value. Defaults to ``True``.
+        nbands (int, optional): Number of bands for ``sparse_diagonalization``.
+            Defaults to ``20``.
+        which (str, optional): Which eigenvalues to target in
+            ``sparse_diagonalization`` (e.g. ``'LM'``, ``'SA'``).
+            Defaults to ``'LM'``.
+        fermi_level (float, optional): Shift (sigma) for ``sparse_diagonalization``
+            to find eigenvalues near the Fermi level. Defaults to ``0``.
+        numPoles (int, optional): Number of poles for the ``pexsi`` solver.
+            Defaults to ``50``.
+        temperature (float, optional): Electronic temperature (eV) for the
+            ``pexsi`` solver. Defaults to ``0.01``.
+        **kwargs: Extra keyword arguments forwarded to the underlying solver
+            (e.g. ``tol``, ``maxiter`` for ``eigsh``).
+
+    Returns:
+        The return value depends on the active flags:
+
+        - Only ``return_density_matrix=True`` (default):
+          returns *density_matrix*.
+        - ``return_density_matrix=True`` and ``return_eigvals=True``:
+          returns *(density_matrix, eigvals)*.
+        - ``return_density_matrix=True`` and ``return_eigvecs=True``:
+          returns *(density_matrix, eigvecs)*.
+        - ``return_density_matrix=True``, ``return_eigvals=True``, and
+          ``return_eigvecs=True``: returns *(density_matrix, eigvals, eigvecs)*.
+        - ``return_density_matrix=False``, ``return_eigvals=True``, and
+          ``return_eigvecs=True``: returns *(eigvals, eigvecs)*.
+        - ``return_density_matrix=False`` and ``return_eigvals=True``:
+          returns *eigvals*.
+        - ``return_density_matrix=False`` and ``return_eigvecs=True``:
+          returns *eigvecs*.
+
+        All arrays match the type of ``Hamiltonian`` (see the table above).
+
+    Raises:
+        ValueError: If an invalid ``method`` is specified, or if incompatible
+            argument combinations are used (e.g. ``Overlap`` with ``pexsi``).
+    """
+    # --- detect and normalise input type ---
+    input_type = _detect_input_type(Hamiltonian)
+
+    if input_type == 'csc':
+        # Normalise any sparse format to csc_matrix
+        Hamiltonian = csc_matrix(Hamiltonian)
+        if Overlap is not None:
+            Overlap = csc_matrix(Overlap)
+    elif input_type == 'numpy':
+        Hamiltonian = np.asarray(Hamiltonian)
+        if Overlap is not None:
+            Overlap = np.asarray(Overlap)
+
+    # -----------------------------------------------------------------------
+    # Full diagonalization
+    # -----------------------------------------------------------------------
     if method == "diagonalization":
-        if Overlap is not None:
-            eigvals, eigvecs = generalized_eigen_torch(Hamiltonian, Overlap)
+        if input_type == 'torch':
+            # --- PyTorch path (GPU-capable) ---
+            if Overlap is not None:
+                eigvals, eigvecs = generalized_eigen_torch(Hamiltonian, Overlap)
+            else:
+                eigvals, eigvecs = torch.linalg.eigh(Hamiltonian)
+
             if not return_density_matrix:
                 if return_eigvals and return_eigvecs:
                     return eigvals, eigvecs
@@ -215,8 +295,8 @@ def Solve_Hamiltonian(
                 if return_eigvecs:
                     return eigvecs
 
-            nocc = len(eigvals)//2
-            density_matrix = 2*eigvecs[:, :nocc] @ eigvecs[:, :nocc].T
+            nocc = len(eigvals) // 2
+            density_matrix = 2 * eigvecs[:, :nocc] @ eigvecs[:, :nocc].conj().T
             if return_eigvals and return_eigvecs:
                 return density_matrix, eigvals, eigvecs
             if return_eigvals:
@@ -224,8 +304,16 @@ def Solve_Hamiltonian(
             if return_eigvecs:
                 return density_matrix, eigvecs
             return density_matrix
+
         else:
-            eigvals, eigvecs = torch.linalg.eigh(Hamiltonian)
+            # --- SciPy path for numpy.ndarray and csc_matrix ---
+            H_dense = Hamiltonian.toarray() if input_type == 'csc' else Hamiltonian
+            S_dense = None
+            if Overlap is not None:
+                S_dense = Overlap.toarray() if input_type == 'csc' else Overlap
+
+            eigvals, eigvecs = scipy.linalg.eigh(H_dense, S_dense)
+
             if not return_density_matrix:
                 if return_eigvals and return_eigvecs:
                     return eigvals, eigvecs
@@ -234,8 +322,15 @@ def Solve_Hamiltonian(
                 if return_eigvecs:
                     return eigvecs
 
-            nocc = len(eigvals)//2
-            density_matrix = 2*eigvecs[:, :nocc] @ eigvecs[:, :nocc].T
+            nocc = len(eigvals) // 2
+            density_matrix_np = 2 * eigvecs[:, :nocc] @ eigvecs[:, :nocc].conj().T
+
+            # Return density matrix in the original sparse format when applicable
+            if input_type == 'csc':
+                density_matrix = csc_matrix(density_matrix_np)
+            else:
+                density_matrix = density_matrix_np
+
             if return_eigvals and return_eigvecs:
                 return density_matrix, eigvals, eigvecs
             if return_eigvals:
@@ -243,28 +338,56 @@ def Solve_Hamiltonian(
             if return_eigvecs:
                 return density_matrix, eigvecs
             return density_matrix
-    
+
+    # -----------------------------------------------------------------------
+    # Sparse (iterative) diagonalization — ARPACK / eigsh
+    # -----------------------------------------------------------------------
     elif method == "sparse_diagonalization":
-        print("Sparse diagonalization is a linear scaling method, but is only implemented for CPU's")
-        if Overlap is not None:
-            eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level,M=Overlap, which=which,**kwargs)
-        else:
-            eigvals, eigvecs = eigsh(Hamiltonian, k=nbands,sigma=fermi_level, which=which,**kwargs)
-        return eigvals,eigvecs
+        print("Sparse diagonalization is a linear scaling method, but is only implemented for CPUs")
 
+        # eigsh accepts sparse matrices natively; convert torch tensors to numpy
+        if input_type == 'torch':
+            H_sp = Hamiltonian.cpu().numpy()
+            S_sp = Overlap.cpu().numpy() if Overlap is not None else None
+        else:
+            H_sp = np.squeeze(np.asarray(Hamiltonian.toarray() if issparse(Hamiltonian) else Hamiltonian))
+            S_sp = None
+            if Overlap is not None:
+                S_sp = np.squeeze(np.asarray(Overlap.toarray() if issparse(Overlap) else Overlap))
+
+        if S_sp is not None:
+            eigvals, eigvecs = eigsh(H_sp, k=nbands, sigma=fermi_level, M=S_sp, which=which, **kwargs)
+        else:
+            eigvals, eigvecs = eigsh(H_sp, k=nbands, sigma=fermi_level, which=which, **kwargs)
+        return eigvals, eigvecs
+
+    # -----------------------------------------------------------------------
+    # PEXSI (Fermi-operator expansion, MPI parallel)
+    # -----------------------------------------------------------------------
     elif method == "pexsi":
         if Overlap is not None:
             raise ValueError("Overlap not supported for PEXSI")
         if return_eigvals or return_eigvecs:
-            raise ValueError("return_eigvals/eigvecs not supported for PEXSI. Only supports return_density_matrix=True.")
+            raise ValueError(
+                "return_eigvals/eigvecs not supported for PEXSI. "
+                "Only return_density_matrix=True is supported."
+            )
         dm_vals, rowind, colind, _mu = get_density_matrix_pexsi(
             Hamiltonian, temperature=temperature, numPoles=numPoles
         )
-        dm_sparse = coo_matrix((dm_vals, (rowind, colind)), shape=(Hamiltonian.shape[0], Hamiltonian.shape[1]))
-        return torch.from_numpy(dm_sparse.toarray())
+        dm_coo = coo_matrix(
+            (dm_vals, (rowind, colind)),
+            shape=(Hamiltonian.shape[0], Hamiltonian.shape[1]),
+        )
+        if input_type == 'csc':
+            return dm_coo.tocsc()
+        elif input_type == 'numpy':
+            return dm_coo.toarray()
+        else:
+            return torch.from_numpy(dm_coo.toarray())
 
     else:
-        raise ValueError("Invalid method")
+        raise ValueError(f"Invalid method '{method}'. Choose from 'diagonalization', 'sparse_diagonalization', or 'pexsi'.")
 
 if __name__=="__main__":
     N = 10

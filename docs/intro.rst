@@ -44,6 +44,7 @@ TB_solve provides multiple solver methods tailored for different system sizes, s
 TB_solve is written in PyTorch and supports both CPU and GPU computation for most methods (including intel gpu's!). 
 tb_solve.Solver() will automatically detect available devices and prioritize using GPU if available. 
 The PEXSI solver is based on the PEXSI algorithm, which is described in the following reference: https://pexsi.readthedocs.io/en/latest/introduction.html
+
 1. **Diagonalization** (``method="diagonalization"``)
    
    * **Description**: Performs a full dense diagonalization of the Hamiltonian.

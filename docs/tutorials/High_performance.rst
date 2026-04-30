@@ -9,6 +9,19 @@ This tutorial demonstrates how to use the high performance solvers provided by `
 
 3. **Sparse Diagonalization** (CPU, MPI parallelization over K-points)(O(mN) scaling, where m is the number of bands. zero and finite temperature, metals and insulators)
 
+.. note::
+
+   ``Solve_Hamiltonian`` automatically selects the underlying linear-algebra
+   library based on the type of the input matrix:
+
+   * **torch.Tensor** → ``torch.linalg.eigh`` / :func:`~tb_solve.Solver.generalized_eigen_torch` (GPU-capable).
+   * **numpy.ndarray** → ``scipy.linalg.eigh`` (CPU only).
+   * **csc_matrix** (or any SciPy sparse) → ``scipy.linalg.eigh`` on the dense
+     view; the returned density matrix is a ``csc_matrix``.
+
+   The output type always matches the input type.  See the
+   :doc:`/usage/index` page for concrete examples.
+
 `PythTB <https://pythtb.org/>`_ is used to generate the Hamiltonian, but these solvers are general to any tight-binding model.
 
 First, import the necessary library and create a Hamiltonian. This hamiltnonian will be used for all solver examples.
@@ -83,8 +96,10 @@ Run the script with the following command and replace $(nproc) with the number o
 
    mpirun -n $(nproc) python pexsi_hpc_example.py 
 
-Example parallelization over K-points using the Direct Diagonalization or sparse diagonalization solvers. 
-If there is a GPU in the environment, the Direct Diagonalization solver will automatically use the GPU.
+Example parallelization over K-points using the Direct Diagonalization or sparse diagonalization solvers.
+If there is a GPU in the environment, the Direct Diagonalization solver will automatically use it when
+the Hamiltonian is passed as a ``torch.Tensor``.  Pass a ``numpy.ndarray`` or ``csc_matrix`` to stay
+on the CPU and use ``scipy.linalg.eigh`` instead.
 
 .. code-block:: python
     
@@ -110,10 +125,12 @@ If there is a GPU in the environment, the Direct Diagonalization solver will aut
     # 3. Each process computes its local list
     local_dm_list = []
     for k_pt in local_k_mesh:
-        H = my_model.hamiltonian(k_pts=k_pt)
+        # PythTB returns a numpy array; pass it directly to stay on the CPU
+        # (scipy.linalg.eigh path), or wrap in torch.tensor() to use the GPU.
+        H = my_model.hamiltonian(k_pts=k_pt)   # numpy.ndarray
         dm_direct_k = Solve_Hamiltonian(
             H, 
-            method="direct_diagonalization",
+            method="diagonalization",
         )
         local_dm_list.append(dm_direct_k)
 
